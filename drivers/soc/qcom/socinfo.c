@@ -61,6 +61,8 @@ enum {
 	HW_PLATFORM_DTV	= 14,
 	HW_PLATFORM_STP = 23,
 	HW_PLATFORM_SBC = 24,
+	HW_PLATFORM_DL70 = 97,
+	HW_PLATFORM_AL20 = 98,
 	HW_PLATFORM_INVALID
 };
 
@@ -80,6 +82,8 @@ const char *hw_platform[] = {
 	[HW_PLATFORM_DTV] = "DTV",
 	[HW_PLATFORM_STP] = "STP",
 	[HW_PLATFORM_SBC] = "SBC",
+	[HW_PLATFORM_DL70] = "dl70",
+	[HW_PLATFORM_AL20] = "al20",
 };
 
 enum {

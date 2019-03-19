@@ -2,7 +2,17 @@
 # TOSHIBA NFC Chip driver Support
 #
 
-menu "Toshiba NFC Chip Driver Support"
+menu "NFC Chip Driver Support"
+
+choice
+    prompt "NFC Choice"
+    default NFC_8992
+config NFC_8992
+    bool "TOSHIBA_NFC"
+config NFC_8994
+    bool "SAMSUNG NFC"
+endchoice
+
 
 config TOSHIBA_NFC
     bool
@@ -11,6 +21,7 @@ config TOSHIBA_NFC
 config TOSHIBA_NFC_GPIO
     bool "TOSHIBA_NFC GPIO Driver"
     select TOSHIBA_NFC
+    depends on NFC_8992
     default n
     ---help---
       Enable the TOSHIBA_NFC GPIO driver for NFC
@@ -20,7 +31,56 @@ config TOSHIBA_NFC_I2C
     select TOSHIBA_NFC
     default n
     depends on I2C
+    depends on NFC_8992
     ---help---
       Enable the TOSHIBA_NFC I2C driver for NFC
+
+
+
+
+
+config SHNFC3
+	bool "NFC device drivers"
+	depends on SERIAL_MSM_HSL && I2C
+        depends on NFC_8994
+	default n
+	help
+	  Enable NFC(Faver3.0) driver.
+
+config SEC_NFC
+    bool "Samsung NFC driver"
+	depends on SHNFC3
+        depends on NFC_8994
+    default n
+    help
+      SAMSUNG NFC Driver.
+      This driver provides support for SAMSUNG NFC products.
+      You should select your NFC product and interface.
+
+      Say Y here to compile support for SAMSUNG NFC driver into the
+      kernel.
+
+choice
+    prompt "SEC NFC Products"
+    depends on SEC_NFC
+    default SEC_NFC_S3FNRN3_FN
+config SEC_NFC_S3FNRN3
+    bool "S3FNRN3"
+config SEC_NFC_S3FNRN3_FN
+    bool "S3FNRN3 for Felica Network"
+endchoice
+
+choice
+    prompt "SEC NFC Interface"
+    depends on SEC_NFC
+    default SEC_NFC_UART
+config SEC_NFC_UART
+    bool "UART"
+config SEC_NFC_I2C
+    bool "I2C"
+endchoice
+
+
+
 
 endmenu

@@ -69,6 +69,8 @@ static LIST_HEAD(wakeup_sources);
 
 static DECLARE_WAIT_QUEUE_HEAD(wakeup_count_wait_queue);
 
+static ktime_t last_read_time;
+
 /**
  * wakeup_source_prepare - Prepare a new wakeup source for initialization.
  * @ws: Wakeup source to prepare.
@@ -387,20 +389,20 @@ int device_set_wakeup_enable(struct device *dev, bool enable)
 }
 EXPORT_SYMBOL_GPL(device_set_wakeup_enable);
 
-#ifdef CONFIG_SHSYS_CUST
-   static unsigned int get_active_locks(void)
-   {
-     struct wakeup_source *ws;
-	 unsigned int active_lock_num = 0; 
-     rcu_read_lock();
-     list_for_each_entry_rcu(ws, &wakeup_sources, entry) {
-     if (ws->active)
-         active_lock_num++;
-     }
-     rcu_read_unlock();
-	 return active_lock_num;
-   }
-#endif /* CONFIG_SHSYS_CUST */
+/**
+ * wakeup_source_not_registered - validate the given wakeup source.
+ * @ws: Wakeup source to be validated.
+ */
+static bool wakeup_source_not_registered(struct wakeup_source *ws)
+{
+	/*
+	 * Use timer struct to check if the given source is initialized
+	 * by wakeup_source_add.
+	 */
+	return ws->timer.function != pm_wakeup_timer_fn ||
+		   ws->timer.data != (unsigned long)ws;
+}
+
 /*
  * The functions below use the observation that each wakeup event starts a
  * period in which the system should not be suspended.  The moment this period
@@ -440,6 +442,10 @@ EXPORT_SYMBOL_GPL(device_set_wakeup_enable);
 static void wakeup_source_activate(struct wakeup_source *ws)
 {
 	unsigned int cec;
+
+	if (WARN(wakeup_source_not_registered(ws),
+			"unregistered wakeup source\n"))
+		return;
 
 #ifdef CONFIG_SHSYS_CUST_DEBUG
    if (sh_debug_mask & SH_DEBUG_WAKEUP_SOURCE)
@@ -550,9 +556,7 @@ static void wakeup_source_deactivate(struct wakeup_source *ws)
 	unsigned int cnt, inpr, cec;
 	ktime_t duration;
 	ktime_t now;
-#ifdef CONFIG_SHSYS_CUST
-    unsigned int active_lock_num;
-#endif /* CONFIG_SHSYS_CUST */
+
 	ws->relax_count++;
 	/*
 	 * __pm_relax() may be called directly or from a timer function.
@@ -595,27 +599,6 @@ static void wakeup_source_deactivate(struct wakeup_source *ws)
 	trace_wakeup_source_deactivate(ws->name, cec);
 
 	split_counters(&cnt, &inpr);
- #ifdef CONFIG_SHSYS_CUST
-	active_lock_num = get_active_locks();
-
-	if(active_lock_num != inpr){
-		pr_debug("not match lock_num active_lock_num= %d inpr = %d \n",active_lock_num,inpr);
-		for (;;) {
-			if(active_lock_num < inpr){
-				cec = atomic_add_return(MAX_IN_PROGRESS, &combined_event_count);
-				split_counters(&cnt, &inpr);
-				pr_debug("wakeup_source_deactivate counter decrement active_lock_num = %d inpr = %d  \n",active_lock_num,inpr);
-			}else if(active_lock_num > inpr){
-				cec = atomic_inc_return(&combined_event_count);
-				split_counters(&cnt, &inpr);
-				pr_debug("wakeup_source_deactivate counter increment active_lock_num = %d inpr = %d  \n",active_lock_num,inpr);
-			}
-			if(active_lock_num == inpr){
-				break;
-			}
-		}
-	}
-#endif /* CONFIG_SHSYS_CUST */
 	if (!inpr && waitqueue_active(&wakeup_count_wait_queue))
 		wake_up(&wakeup_count_wait_queue);
 }
@@ -850,9 +833,14 @@ bool pm_wakeup_pending(void)
 bool pm_get_wakeup_count(unsigned int *count, bool block)
 {
 	unsigned int cnt, inpr;
+	unsigned long flags;
 
 	if (block) {
 		DEFINE_WAIT(wait);
+
+		spin_lock_irqsave(&events_lock, flags);
+		last_read_time = ktime_get();
+		spin_unlock_irqrestore(&events_lock, flags);
 
 		for (;;) {
 			prepare_to_wait(&wakeup_count_wait_queue, &wait,
@@ -885,6 +873,7 @@ bool pm_save_wakeup_count(unsigned int count)
 {
 	unsigned int cnt, inpr;
 	unsigned long flags;
+	struct wakeup_source *ws;
 
 	events_check_enabled = false;
 	spin_lock_irqsave(&events_lock, flags);
@@ -892,6 +881,15 @@ bool pm_save_wakeup_count(unsigned int count)
 	if (cnt == count && inpr == 0) {
 		saved_count = count;
 		events_check_enabled = true;
+	} else {
+		rcu_read_lock();
+		list_for_each_entry_rcu(ws, &wakeup_sources, entry) {
+			if (ws->active ||
+			    ktime_compare(ws->last_time, last_read_time) > 0) {
+				ws->wakeup_count++;
+			}
+		}
+		rcu_read_unlock();
 	}
 	spin_unlock_irqrestore(&events_lock, flags);
 	return events_check_enabled;

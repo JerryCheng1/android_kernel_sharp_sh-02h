@@ -191,13 +191,4 @@ extern int cnss_is_auto_suspend_allowed(const char *caller_func);
 extern int cnss_pm_runtime_request(struct device *dev, enum
 		cnss_runtime_request request);
 
-/* [WLAN][SHARP] Customize Start
-                 2015.08.21 register resume function to workqueue to compress
-                 system resuming time. */
-#ifdef SH_WIFI_CUSTOMIZE
-extern int cnss_is_resumed(void);
-extern void cnss_flush_resume_work(void);
-#endif /* SH_WIFI_CUSTOMIZE */
-/* [WLAN][SHARP] Customize End */
-
 #endif /* _NET_CNSS_H_ */

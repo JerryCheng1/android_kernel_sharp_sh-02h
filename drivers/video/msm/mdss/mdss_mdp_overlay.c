@@ -81,6 +81,11 @@ extern void mdss_shdisp_pre_blank_notify(void);
 #ifdef	CONFIG_SHDISP /* CUST_ID_00052 */
 static int pan_displayed;
 #endif /* CONFIG_SHDISP */
+#ifdef CONFIG_SHDISP /* CUST_ID_00070 */
+#ifndef SHDISP_DISABLE_HR_VIDEO
+extern void mdss_mdp_hr_video_overlay_hint(struct msm_fb_data_type *mfd);
+#endif /* SHDISP_DISABLE_HR_VIDEO */
+#endif /* CONFIG_SHDISP */
 static inline bool is_ov_right_blend(struct mdp_rect *left_blend,
 	struct mdp_rect *right_blend, u32 left_lm_w)
 {
@@ -2346,6 +2351,13 @@ static int mdss_mdp_overlay_queue(struct msm_fb_data_type *mfd,
 			pr_err("src_data pmem error\n");
 		}
 	}
+#ifdef CONFIG_SHDISP /* CUST_ID_00070 */
+#ifndef SHDISP_DISABLE_HR_VIDEO
+	if (!ret && mfd->panel_info->type == MIPI_VIDEO_PANEL) {
+		mdss_mdp_hr_video_overlay_hint(mfd);
+	}
+#endif /* SHDISP_DISABLE_HR_VIDEO */
+#endif /* CONFIG_SHDISP */
 	mutex_unlock(&mdp5_data->list_lock);
 
 	mdss_mdp_pipe_unmap(pipe);
@@ -4301,6 +4313,22 @@ static int mdss_mdp_overlay_precommit(struct msm_fb_data_type *mfd)
 				mfd->index, ret);
 		ret = -EPIPE;
 	}
+
+	/*
+	 * If we are in process of mode switch we may have an invalid state.
+	 * We can allow commit to happen if there are no pipes attached as only
+	 * border color will be seen regardless of resolution or mode.
+	 */
+	if ((mfd->switch_state != MDSS_MDP_NO_UPDATE_REQUESTED) &&
+			(mfd->switch_state != MDSS_MDP_WAIT_FOR_COMMIT)) {
+		if (list_empty(&mdp5_data->pipes_used)) {
+			mfd->switch_state = MDSS_MDP_WAIT_FOR_COMMIT;
+		} else {
+			pr_warn("Invalid commit on fb%d with state=%d\n",
+					mfd->index, mfd->switch_state);
+			ret = -EINVAL;
+		}
+	}
 	mutex_unlock(&mdp5_data->ov_lock);
 
 	return ret;
@@ -4599,6 +4627,45 @@ validate_exit:
 	return ret;
 }
 
+#ifdef CONFIG_SHDISP /* CUST_ID_00070 */
+#ifndef SHDISP_DISABLE_HR_VIDEO
+static int mdss_mdp_set_mfr(struct msm_fb_data_type *mfd, int arg)
+{
+	int param = 0;
+	struct mdss_overlay_private *mdp5_data;
+
+	if (!mfd) {
+		pr_err("invalid mfd\n");
+		return -ENODEV;
+	}
+
+	mdp5_data = mfd_to_mdp5_data(mfd);
+	if (!mdp5_data) {
+		pr_err("invalid mdp5_data\n");
+		return -ENODEV;
+	}
+
+	if (!mdp5_data->ctl) {
+		pr_err("invalid mdp5_data->ctl\n");
+		return -ENODEV;
+	}
+
+	if (arg == 511 || arg == 59) {
+		param = 0;
+	} else if (0 <= arg && arg <= 5) {
+		param = arg + 1;
+	} else {
+		pr_err("unsupported MFR param. param=%d\n", arg);
+		return -EINVAL;
+	}
+
+	mdss_mdp_ctl_update_fps(mdp5_data->ctl, param);
+
+	return 0;
+}
+#endif /* SHDISP_DISABLE_HR_VIDEO */
+#endif /* CONFIG_SHDISP */
+
 static int mdss_mdp_overlay_ioctl_handler(struct msm_fb_data_type *mfd,
 					  u32 cmd, void __user *argp)
 {
@@ -4769,6 +4836,23 @@ static int mdss_mdp_overlay_ioctl_handler(struct msm_fb_data_type *mfd,
 	case MSMFB_OVERLAY_PREPARE:
 		ret = __handle_ioctl_overlay_prepare(mfd, argp);
 		break;
+#ifdef CONFIG_SHDISP /* CUST_ID_00070 */
+	case MSMFB_SET_MFR:
+	{
+#ifndef SHDISP_DISABLE_HR_VIDEO
+		int arg = 0;
+		ret = copy_from_user(&arg, argp, sizeof(arg));
+		if (ret) {
+			pr_err("MSMFB_SET_MFR failed (%d)\n", ret);
+			return ret;
+		}
+		ret = mdss_mdp_set_mfr(mfd, arg);
+#else  /* SHDISP_DISABLE_HR_VIDEO */
+		ret = 0;
+#endif /* SHDISP_DISABLE_HR_VIDEO */
+		break;
+	}
+#endif /* CONFIG_SHDISP */
 	default:
 		if (mfd->panel.type == WRITEBACK_PANEL)
 			ret = mdss_mdp_wb_ioctl_handler(mfd, cmd, argp);
@@ -4908,6 +4992,7 @@ static int mdss_mdp_overlay_off(struct msm_fb_data_type *mfd)
 	struct mdss_overlay_private *mdp5_data;
 	struct mdss_mdp_mixer *mixer;
 	int need_cleanup;
+	bool destroy_ctl = false;
 
 	if (!mfd)
 		return -ENODEV;
@@ -4968,6 +5053,18 @@ static int mdss_mdp_overlay_off(struct msm_fb_data_type *mfd)
 	mutex_unlock(&mdp5_data->list_lock);
 	mutex_unlock(&mdp5_data->ov_lock);
 
+	destroy_ctl = !mfd->ref_cnt || mfd->panel_reconfig;
+
+	mutex_lock(&mfd->switch_lock);
+	if (mfd->switch_state != MDSS_MDP_NO_UPDATE_REQUESTED) {
+		destroy_ctl = true;
+		need_cleanup = false;
+		mfd->switch_state = MDSS_MDP_NO_UPDATE_REQUESTED;
+		pr_warn("fb%d blank while mode switch (%d) in progress\n",
+				mfd->index, mfd->switch_state);
+	}
+	mutex_unlock(&mfd->switch_lock);
+
 	if (need_cleanup) {
 		pr_debug("cleaning up pipes on fb%d\n", mfd->index);
 		mdss_mdp_overlay_kickoff(mfd, NULL);
@@ -5000,7 +5097,7 @@ ctl_stop:
 			mdss_mdp_ctl_notifier_unregister(mdp5_data->ctl,
 					&mfd->mdp_sync_pt_data.notifier);
 
-			if (!mfd->ref_cnt || mfd->panel_reconfig) {
+			if (destroy_ctl) {
 				mdp5_data->borderfill_enable = false;
 				mdss_mdp_ctl_destroy(mdp5_data->ctl);
 				mdp5_data->ctl = NULL;

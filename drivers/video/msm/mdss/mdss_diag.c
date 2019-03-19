@@ -24,9 +24,9 @@
 #include <linux/module.h>
 #include "mdss_debug.h"
 
+#define MDSS_DIAG_MIPI_CLKCHG_ENABLE
 #if defined(CONFIG_SHDISP_PANEL_HAYABUSA)
 #define MDSS_DIAG_MIPI_CHECK_ENABLE
-#define MDSS_DIAG_MIPI_CLKCHG_ENABLE
 #endif  /* CONFIG_SHDISP_PANEL_HAYABUSA */
 
 #define MDSS_DIAG_MIPI_CHECK_AMP_OFF		(0x0780)
@@ -66,9 +66,6 @@ static int mdss_diag_mipi_clkchg_panel(struct mdp_mipi_clkchg_param *mipi_clkchg
 static void mdss_diag_mipi_clkchg_param_log(struct mdp_mipi_clkchg_param *mdp_mipi_clkchg_param);
 #endif /* MDSS_DIAG_MIPI_CLKCHG_ENABLE */
 
-#if defined(CONFIG_SHDISP_PANEL_ANDY)
-extern int shdisp_api_set_freq_param(mdp_mipi_clkchg_panel_t *freq);
-#endif  /* defined(CONFIG_SHDISP_PANEL_ANDY) */
 #ifndef SHDISP_DET_DSI_MIPI_ERROR
 extern void mdss_dsi_err_intr_ctrl(struct mdss_dsi_ctrl_pdata *ctrl, u32 mask,int enable);
 #endif /* SHDISP_DET_DSI_MIPI_ERROR */
@@ -200,9 +197,9 @@ int mdss_diag_mipi_clkchg(struct mdp_mipi_clkchg_param *mipi_clkchg_param)
 	struct mdss_mdp_ctl *pctl;
 	struct mdss_mdp_ctl *sctl;
 	struct mdss_panel_data *pdata;
-#if defined(CONFIG_SHDISP_PANEL_HAYABUSA)
+#if defined(CONFIG_SHDISP_PANEL_HAYABUSA) || defined(CONFIG_SHDISP_PANEL_ANDY)
 	struct shdisp_freq_params freq;
-#endif  /* CONFIG_SHDISP_PANEL_HAYABUSA */
+#endif  /* defined(CONFIG_SHDISP_PANEL_HAYABUSA) || defined(CONFIG_SHDISP_PANEL_ANDY) */
 
 	pr_debug("%s: called\n", __func__);
 	pctl = mdss_shdisp_get_mdpctrl(0);
@@ -235,7 +232,11 @@ int mdss_diag_mipi_clkchg(struct mdp_mipi_clkchg_param *mipi_clkchg_param)
 	mdss_diag_mipi_clkchg_host_data(mipi_clkchg_param, pdata);
 
 #if defined(CONFIG_SHDISP_PANEL_ANDY)
-	shdisp_api_set_freq_param(&mipi_clkchg_param->panel);
+	freq.rtn = mipi_clkchg_param->panel.andy.rtn;
+	freq.gip = mipi_clkchg_param->panel.andy.gip;
+	freq.vbp = mipi_clkchg_param->panel.andy.vbp;
+	freq.vfp = mipi_clkchg_param->panel.andy.vfp;
+	shdisp_api_set_freq_param(&freq);
 #endif  /* defined(CONFIG_SHDISP_PANEL_ANDY) */
 #if defined(CONFIG_SHDISP_PANEL_HAYABUSA)
 	freq.internal_osc = mipi_clkchg_param->internal_osc;
@@ -955,7 +956,7 @@ static int mdss_diag_mipi_clkchg_panel(struct mdp_mipi_clkchg_param *mipi_clkchg
 {
 	int ret = 0;
 #if defined(CONFIG_SHDISP_PANEL_ANDY)
-	static char mipi_sh_hayabusa_cmds_clkchgSetting[6][2] = {
+	static char mipi_sh_andy_cmds_clkchgSetting[6][2] = {
 		{0xFF, 0x05 },
 		{0x90, 0x00 },
 		{0x9B, 0x00 },
@@ -963,26 +964,26 @@ static int mdss_diag_mipi_clkchg_panel(struct mdp_mipi_clkchg_param *mipi_clkchg
 		{0xD3, 0x00 },
 		{0xD4, 0x00 }
 	};
-	static struct shdisp_dsi_cmd_desc mipi_sh_hayabusa_cmds_clkchg[] = {
-		{SHDISP_DTYPE_DCS_WRITE1, 2, mipi_sh_hayabusa_cmds_clkchgSetting[0]},
-		{SHDISP_DTYPE_DCS_WRITE1, 2, mipi_sh_hayabusa_cmds_clkchgSetting[1]},
-		{SHDISP_DTYPE_DCS_WRITE1, 2, mipi_sh_hayabusa_cmds_clkchgSetting[2]},
-		{SHDISP_DTYPE_DCS_WRITE1, 2, mipi_sh_hayabusa_cmds_clkchgSetting[3]},
-		{SHDISP_DTYPE_DCS_WRITE1, 2, mipi_sh_hayabusa_cmds_clkchgSetting[4]},
-		{SHDISP_DTYPE_DCS_WRITE1, 2, mipi_sh_hayabusa_cmds_clkchgSetting[5]},
+	static struct shdisp_dsi_cmd_desc mipi_sh_andy_cmds_clkchg[] = {
+		{SHDISP_DTYPE_DCS_WRITE1, 2, mipi_sh_andy_cmds_clkchgSetting[0]},
+		{SHDISP_DTYPE_DCS_WRITE1, 2, mipi_sh_andy_cmds_clkchgSetting[1]},
+		{SHDISP_DTYPE_DCS_WRITE1, 2, mipi_sh_andy_cmds_clkchgSetting[2]},
+		{SHDISP_DTYPE_DCS_WRITE1, 2, mipi_sh_andy_cmds_clkchgSetting[3]},
+		{SHDISP_DTYPE_DCS_WRITE1, 2, mipi_sh_andy_cmds_clkchgSetting[4]},
+		{SHDISP_DTYPE_DCS_WRITE1, 2, mipi_sh_andy_cmds_clkchgSetting[5]},
 	};
 
 	pr_debug("%s: called\n", __func__);
 
-	mipi_sh_hayabusa_cmds_clkchgSetting[1][1] = mipi_clkchg_param->panel.hayabusa.rtn;
+	mipi_sh_andy_cmds_clkchgSetting[1][1] = mipi_clkchg_param->panel.andy.rtn;
 
-	mipi_sh_hayabusa_cmds_clkchgSetting[2][1] = mipi_clkchg_param->panel.hayabusa.gip;
+	mipi_sh_andy_cmds_clkchgSetting[2][1] = mipi_clkchg_param->panel.andy.gip;
 
-	mipi_sh_hayabusa_cmds_clkchgSetting[4][1] = mipi_clkchg_param->panel.hayabusa.vbp;
+	mipi_sh_andy_cmds_clkchgSetting[4][1] = mipi_clkchg_param->panel.andy.vbp;
 
-	mipi_sh_hayabusa_cmds_clkchgSetting[5][1] = mipi_clkchg_param->panel.hayabusa.vfp;
+	mipi_sh_andy_cmds_clkchgSetting[5][1] = mipi_clkchg_param->panel.andy.vfp;
 
-	ret = mdss_shdisp_host_dsi_tx(1, mipi_sh_hayabusa_cmds_clkchg, ARRAY_SIZE(mipi_sh_hayabusa_cmds_clkchg));
+	ret = mdss_shdisp_host_dsi_tx(1, mipi_sh_andy_cmds_clkchg, ARRAY_SIZE(mipi_sh_andy_cmds_clkchg));
 
 	pr_debug("%s: end ret(%d)\n", __func__, ret);
 
@@ -1021,7 +1022,12 @@ static void mdss_diag_mipi_clkchg_param_log(struct mdp_mipi_clkchg_param *mdp_mi
 
 #if defined(CONFIG_SHDISP_PANEL_HAYABUSA)
 	pr_debug("[%s]param->internal_osc            = %10d\n"  , __func__, mdp_mipi_clkchg_param->internal_osc             );
-#endif  /* CONFIG_SHDISP_PANEL_HAYABUSA */
+#elif defined(CONFIG_SHDISP_PANEL_ANDY)
+	pr_debug("[%s]param->panel.andy.rtn          = 0x%02X\n", __func__, mdp_mipi_clkchg_param->panel.andy.rtn           );
+	pr_debug("[%s]param->panel.andy.gip          = 0x%02X\n", __func__, mdp_mipi_clkchg_param->panel.andy.gip           );
+	pr_debug("[%s]param->panel.andy.vbp          = 0x%02X\n", __func__, mdp_mipi_clkchg_param->panel.andy.vbp           );
+	pr_debug("[%s]param->panel.andy.vfp          = 0x%02X\n", __func__, mdp_mipi_clkchg_param->panel.andy.vfp           );
+#endif  /* CONFIG_SHDISP_PANEL_XXX */
 
 	return;
 }

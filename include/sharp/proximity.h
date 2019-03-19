@@ -38,6 +38,7 @@
 /* MACROS                                                                    */
 /* ------------------------------------------------------------------------- */
 #define PROX_DRV_MSM8992
+#define PROX_DRV_MSM8994
 #define PROX_DRIVER_NAME     "gp2a-prox"
 
 #define SH_PROXIMITY_RESULT_FAILURE    -1

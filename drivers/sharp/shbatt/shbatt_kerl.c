@@ -16,7 +16,6 @@
 /*+-----------------------------------------------------------------------------+*/
 /*| @ DEFINE COMPILE SWITCH :                                                   |*/
 /*+-----------------------------------------------------------------------------+*/
-
 /* log control for read_adc_channel */
 #define SHBATT_DEBUG_READ_ADC_CHANNEL
 
@@ -49,6 +48,7 @@
 #include <linux/input.h>
 #include <linux/qpnp/qpnp-adc.h>
 
+#include <linux/bitops.h>
 #include "sharp/shbatt_kerl.h"
 #include "sharp/shpwr_log.h"
 #include "sharp/sh_smem.h"
@@ -211,6 +211,13 @@
 #define SHBATT_FAIL_SAFE_RESUME		1
 #define SHBATT_NON_DISP_CHAR (-128) 
 
+#define USB_SOC								BIT(0)
+#define USE_SOC_SLEEP						BIT(1)
+#define USE_SOC_MULTI						BIT(2)
+#define USE_SOC_SLEEP_MULTI					BIT(3)
+#define USE_SOC_AND_SOC_SLEEP				(BIT(0) | BIT(1))
+#define USE_SOC_MULTI_AND_SOC_SLEEP_MULTI	(BIT(2) | BIT(3))
+
 /*+-----------------------------------------------------------------------------+*/
 /*| @ ENUMERATION DECLARE :                                                     |*/
 /*+-----------------------------------------------------------------------------+*/
@@ -282,6 +289,7 @@ typedef struct shbatt_timer_tag
 	shbatt_timer_type			timer_type;
 	enum alarmtimer_type		alarm_type;
 	int							prm;
+	bool						in_use;
 } shbatt_timer_t;
 
 #ifdef CONFIG_PM_SUPPORT_BATT_TRACEABILITY
@@ -473,6 +481,8 @@ module_param_array(absolute, int, NULL, S_IRUSR | S_IWUSR);
 static int			ratiometric[2] = {0,0};
 module_param_array(ratiometric, int, NULL, S_IRUSR | S_IWUSR);
 
+static int						soc_poll_failsafe = 1800;
+module_param_named(soc_poll_failsafe, soc_poll_failsafe, int, S_IRUSR | S_IWUSR);
 /*+-----------------------------------------------------------------------------+*/
 /*| @ EXTERN FUNCTION PROTO TYPE DECLARE :                                      |*/
 /*+-----------------------------------------------------------------------------+*/
@@ -972,6 +982,7 @@ static shbatt_timer_t			shbatt_poll_timer[NUM_SHBATT_POLL_TIMER_TYPE] =
 		},
 		.alarm_type	= ALARM_BOOTTIME,
 		.timer_type	= SHBATT_TIMER_TYPE_ALARMTIMER,
+		.in_use = false,
 	},
 	{
 		.cb_func =
@@ -980,6 +991,7 @@ static shbatt_timer_t			shbatt_poll_timer[NUM_SHBATT_POLL_TIMER_TYPE] =
 		},
 		.alarm_type	= ALARM_BOOTTIME,
 		.timer_type	= SHBATT_TIMER_TYPE_HRTIMER,
+		.in_use = false,
 	},
 	{
 		.cb_func =
@@ -988,6 +1000,7 @@ static shbatt_timer_t			shbatt_poll_timer[NUM_SHBATT_POLL_TIMER_TYPE] =
 		},
 		.alarm_type	= ALARM_BOOTTIME,
 		.timer_type	= SHBATT_TIMER_TYPE_ALARMTIMER,
+		.in_use = false,
 	},
 	{
 		.cb_func =
@@ -996,6 +1009,7 @@ static shbatt_timer_t			shbatt_poll_timer[NUM_SHBATT_POLL_TIMER_TYPE] =
 		},
 		.alarm_type	= ALARM_BOOTTIME,
 		.timer_type	= SHBATT_TIMER_TYPE_HRTIMER,
+		.in_use = false,
 	},
 	/* low batt */
 	{
@@ -1005,6 +1019,7 @@ static shbatt_timer_t			shbatt_poll_timer[NUM_SHBATT_POLL_TIMER_TYPE] =
 		},
 		.alarm_type	= ALARM_BOOTTIME,
 		.timer_type	= SHBATT_TIMER_TYPE_ALARMTIMER,
+		.in_use = false,
 	},
 	{
 		.cb_func =
@@ -1013,6 +1028,7 @@ static shbatt_timer_t			shbatt_poll_timer[NUM_SHBATT_POLL_TIMER_TYPE] =
 		},
 		.alarm_type	= ALARM_BOOTTIME,
 		.timer_type	= SHBATT_TIMER_TYPE_ALARMTIMER,
+		.in_use = false,
 	},
 };
 
@@ -1129,6 +1145,9 @@ shbatt_result_t shbatt_api_notify_charge_full( void )
 				"[S] %s()\n", __FUNCTION__ );
 
 	alarm_cancel(&(shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC].alm.alarm_timer));
+
+	shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC].in_use = false;
+	SHBATT_TRACE("%s : Change timer[%d] in use=%d\n",__FUNCTION__,SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC,shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC].in_use);
 
 	soc.type	= SHBATT_TIMER_TYPE_0;
 	soc.sleep	= SHBATT_TIMER_TYPE_WAKEUP;
@@ -1981,6 +2000,8 @@ static enum hrtimer_restart shbatt_seq_fuelgauge_soc_poll_hrtimer_expire_cb(
 		shbatt_timer_restarted = false;
 	}
 
+	shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_SLEEP].in_use = false;
+	SHBATT_TRACE("%s : Change timer[%d] in use=%d\n",__FUNCTION__,SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_SLEEP,shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_SLEEP].in_use);
 
 	SHPWR_LOG( SHPWR_LOG_LEVEL_DEBUG,SHPWR_LOG_TYPE_BATT,
 				"[E] %s()\n",__FUNCTION__);
@@ -2022,6 +2043,8 @@ static enum hrtimer_restart shbatt_seq_fuelgauge_soc_poll_hrtimer_expire_multi_c
 		shbatt_timer_restarted = false;
 	}
 
+	shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_SLEEP_MULTI].in_use = false;
+	SHBATT_TRACE("%s : Change timer[%d] in use=%d\n",__FUNCTION__,SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_SLEEP_MULTI,shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_SLEEP_MULTI].in_use);
 
 	SHPWR_LOG( SHPWR_LOG_LEVEL_DEBUG,SHPWR_LOG_TYPE_BATT,
 				"[E] %s()\n",__FUNCTION__);
@@ -2055,6 +2078,9 @@ static enum alarmtimer_restart shbatt_seq_fuelgauge_soc_poll_timer_expire_cb(
 		shbatt_timer_restarted = false;
 	}
 
+	shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC].in_use = false;
+	SHBATT_TRACE("%s : Change timer[%d] in use=%d\n",__FUNCTION__,SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC,shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC].in_use);
+
 	SHPWR_LOG( SHPWR_LOG_LEVEL_DEBUG,SHPWR_LOG_TYPE_BATT,
 				"[E] %s()\n",__FUNCTION__);
 	return ret;
@@ -2086,6 +2112,9 @@ static enum alarmtimer_restart shbatt_seq_fuelgauge_soc_poll_timer_expire_multi_
 		shbatt_timer_restarted = false;
 	}
 
+	shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_MULTI].in_use = false;
+	SHBATT_TRACE("%s : Change timer[%d] in use=%d\n",__FUNCTION__,SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_MULTI,shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_MULTI].in_use);
+
 	SHPWR_LOG( SHPWR_LOG_LEVEL_DEBUG,SHPWR_LOG_TYPE_BATT,
 				"[E] %s()\n",__FUNCTION__);
 
@@ -2104,6 +2133,9 @@ static enum alarmtimer_restart shbatt_seq_low_battery_poll_timer_expire_cb(
 
 	shbatt_api_exec_low_battery_check_sequence(SHBATT_LOW_BATTERY_EVENT_LOW_TIMER);
 
+	shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_LOW_BATTERY].in_use = false;
+	SHBATT_TRACE("%s : Change timer[%d] in use=%d\n",__FUNCTION__,SHBATT_POLL_TIMER_TYPE_LOW_BATTERY,shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_LOW_BATTERY].in_use);
+
 	SHPWR_LOG( SHPWR_LOG_LEVEL_DEBUG,SHPWR_LOG_TYPE_BATT,
 				"[E] %s()\n",__FUNCTION__);
 
@@ -2120,6 +2152,9 @@ static enum alarmtimer_restart shbatt_seq_fatal_battery_poll_timer_expire_cb(
 				"[S] %s()\n",__FUNCTION__);
 
 	shbatt_api_exec_low_battery_check_sequence(SHBATT_LOW_BATTERY_EVENT_FATAL_TIMER);
+
+	shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FATAL_BATTERY].in_use = false;
+	SHBATT_TRACE("%s : Change timer[%d] in use=%d\n",__FUNCTION__,SHBATT_POLL_TIMER_TYPE_FATAL_BATTERY,shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FATAL_BATTERY].in_use);
 
 	SHPWR_LOG( SHPWR_LOG_LEVEL_DEBUG,SHPWR_LOG_TYPE_BATT,
 				"[E] %s()\n",__FUNCTION__);
@@ -2256,6 +2291,9 @@ static shbatt_result_t shbatt_api_exec_fuelgauge_soc_poll_sequence(
 		set_time.tv64 = SHBATT_TIMER_FG_PERIOD_NS;
 		alarm_start_relative(&(shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC].alm.alarm_timer),
 					set_time );
+
+		shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC].in_use = true;
+		SHBATT_TRACE("%s : Change timer[%d] in use=%d\n",__FUNCTION__,SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC,shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC].in_use);
 		return SHBATT_RESULT_REJECTED;
 	}
 
@@ -3096,6 +3134,9 @@ static int shbatt_drv_ioctl_cmd_set_timer(
 			hrtimer_cancel( &(shbatt_poll_timer[pti.ptt].alm.hr_timer) );
 			hrtimer_start( &(shbatt_poll_timer[pti.ptt].alm.hr_timer),
 						set_time, HRTIMER_MODE_ABS );
+
+			shbatt_poll_timer[pti.ptt].in_use = true;
+			SHBATT_TRACE("%s : Change timer[%d] in use=%d\n",__FUNCTION__,pti.ptt,shbatt_poll_timer[pti.ptt].in_use);
 			break;
 
 		case SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC:
@@ -3109,6 +3150,11 @@ static int shbatt_drv_ioctl_cmd_set_timer(
 			alarm_cancel( &(shbatt_poll_timer[pti.ptt].alm.alarm_timer) );
 			alarm_start_relative(&(shbatt_poll_timer[pti.ptt].alm.alarm_timer),
 						set_time);
+
+			shbatt_poll_timer[pti.ptt].in_use = true;
+			SHBATT_TRACE("%s : Change timer[%d] in use=%d\n",__FUNCTION__,pti.ptt,shbatt_poll_timer[pti.ptt].in_use);
+			SHPWR_LOG( SHPWR_LOG_LEVEL_DEBUG,SHPWR_LOG_TYPE_BATT,
+						"[P] %s():type:%d expire_time=%d\n",__FUNCTION__, pti.ptt, pti.ms );
 			break;
 
 		default:
@@ -3145,6 +3191,9 @@ static int shbatt_drv_ioctl_cmd_clr_timer(
 		case SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_SLEEP:
 		case SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_SLEEP_MULTI:
 			hrtimer_cancel( &(shbatt_poll_timer[pti.ptt].alm.hr_timer) );
+
+			shbatt_poll_timer[pti.ptt].in_use = false;
+			SHBATT_TRACE("%s : Change timer[%d] in use=%d\n",__FUNCTION__,pti.ptt,shbatt_poll_timer[pti.ptt].in_use);
 			break;
 
 		case SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC:
@@ -3153,6 +3202,9 @@ static int shbatt_drv_ioctl_cmd_clr_timer(
 		case SHBATT_POLL_TIMER_TYPE_LOW_BATTERY:
 		case SHBATT_POLL_TIMER_TYPE_FATAL_BATTERY:
 			alarm_cancel( &(shbatt_poll_timer[pti.ptt].alm.alarm_timer) );
+
+			shbatt_poll_timer[pti.ptt].in_use = false;
+			SHBATT_TRACE("%s : Change timer[%d] in use=%d\n",__FUNCTION__,pti.ptt,shbatt_poll_timer[pti.ptt].in_use);
 			break;
 
 		default:
@@ -4244,8 +4296,10 @@ static void shbatt_input_event(struct input_handle *handle, unsigned int type,
 		SHBATT_TRACE("[P] %s(): now_time=%010lu.%09lu \n",__FUNCTION__, now_time_sub.tv_sec, now_time_sub.tv_nsec);
 		SHBATT_TRACE("[P] %s(): shbatt_timer_restarted=%d diff_time=%d \n",__FUNCTION__, shbatt_timer_restarted, diff_time);
 
-		if((shbatt_timer_restarted == false) && (diff_time > 4200))
+		if((shbatt_timer_restarted == false) && (diff_time > soc_poll_failsafe))
 		{
+			int i, timer_in_use = 0;
+
 			ts.tv_sec = now_time.tv_sec + 10;
 			ts.tv_nsec = now_time.tv_nsec;
 			
@@ -4254,10 +4308,76 @@ static void shbatt_input_event(struct input_handle *handle, unsigned int type,
 			shbatt_timer_restarted = true;
 			memset( &set_time,0x00, sizeof( set_time ) );
 			set_time.tv64 = SHBATT_TIMER_FG_PERIOD_NS;
-			shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC].prm = 0;
-			alarm_cancel(&(shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC].alm.alarm_timer));
-			alarm_start_relative(&(shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC].alm.alarm_timer),
-						set_time);
+
+			timer_in_use = 0;
+			for(i=0;i<SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_SLEEP_MULTI;i++)
+			{
+				SHBATT_TRACE("[P] %s : Timer[%d]=%d\n",__FUNCTION__,i,shbatt_poll_timer[i].in_use);
+				if(shbatt_poll_timer[i].in_use)
+					timer_in_use |= BIT(i);
+			}
+			SHBATT_TRACE("[P] %s : Timer use=0x%x\n",__FUNCTION__,timer_in_use);
+			switch(timer_in_use)
+			{
+				case USB_SOC:
+					shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC].prm = 0;
+					alarm_cancel( &(shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC].alm.alarm_timer) );
+					alarm_start_relative( &(shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC].alm.alarm_timer), set_time);
+						SHBATT_TRACE("[P] %s : Cancel and set timer=%d(use:%d)\n",__FUNCTION__,
+										SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC,
+										shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC].in_use);
+						/* Use same timer, so need not to update in_use */
+					break;
+				case USE_SOC_MULTI:
+					shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_MULTI].prm = 0;
+					alarm_cancel( &(shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_MULTI].alm.alarm_timer) );
+					alarm_start_relative( &(shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_MULTI].alm.alarm_timer), set_time);
+						SHBATT_TRACE("[P] %s : Cancel and set timer=%d(use:%d)\n",__FUNCTION__,
+										SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_MULTI,
+										shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_MULTI].in_use);
+						/* Use same timer, so need not to update in_use */
+					break;
+				case USE_SOC_SLEEP:
+					hrtimer_cancel( &(shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_SLEEP].alm.hr_timer) );
+					shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_SLEEP].in_use = 0;
+					alarm_start_relative( &(shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC].alm.alarm_timer), set_time);
+					shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC].in_use = 1;
+						SHBATT_TRACE("[P] %s : Cancel timer=%d(use:%d) and set timer=%d(use:%d)\n",__FUNCTION__,
+										SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_SLEEP,
+										shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_SLEEP].in_use,
+										SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC,
+										shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC].in_use);
+					break;
+				case USE_SOC_SLEEP_MULTI:
+					hrtimer_cancel( &(shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_SLEEP_MULTI].alm.hr_timer) );
+					shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_SLEEP_MULTI].in_use = 0;
+					alarm_start_relative( &(shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_MULTI].alm.alarm_timer), set_time);
+					shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_MULTI].in_use = 1;
+						SHBATT_TRACE("[P] %s : Cancel timer=%d(use:%d) and set timer=%d(use:%d)\n",__FUNCTION__,
+										SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_SLEEP_MULTI,
+										shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_SLEEP_MULTI].in_use,
+										SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_MULTI,
+										shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_MULTI].in_use);
+					break;
+				case USE_SOC_AND_SOC_SLEEP:
+					alarm_cancel( &(shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC].alm.alarm_timer) );
+					alarm_start_relative( &(shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC].alm.alarm_timer), set_time);
+						SHBATT_TRACE("[P] %s : Cancel and set timer=%d(use:%d)\n",__FUNCTION__,
+										SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC,
+										shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC].in_use);
+						/* Use same timer, so need not to update in_use */
+					break;
+				case USE_SOC_MULTI_AND_SOC_SLEEP_MULTI:
+					alarm_cancel( &(shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_MULTI].alm.alarm_timer) );
+					alarm_start_relative( &(shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_MULTI].alm.alarm_timer), set_time);
+						SHBATT_TRACE("[P] %s : Cancel and set timer=%d(use:%d)\n",__FUNCTION__,
+										SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_MULTI,
+										shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_MULTI].in_use);
+						/* Use same timer, so need not to update in_use */
+					break;
+				default:
+					SHBATT_ERROR("%s : Invalid timer use(0x%x)\n",__FUNCTION__,timer_in_use);
+			}
 		}
 	}
 
@@ -4782,10 +4902,12 @@ static void shbatt_drv_shutdown(
 		{
 		case SHBATT_TIMER_TYPE_HRTIMER:
 			hrtimer_cancel(&(shbatt_poll_timer[alm_cnt].alm.hr_timer));
+			shbatt_poll_timer[alm_cnt].in_use = false;
 			break;
 
 		case SHBATT_TIMER_TYPE_ALARMTIMER:
 			alarm_cancel( &(shbatt_poll_timer[alm_cnt].alm.alarm_timer) );
+			shbatt_poll_timer[alm_cnt].in_use = false;
 			break;
 
 		default:
@@ -4825,15 +4947,83 @@ static int shbatt_drv_resume(
 				 now_time.tv_sec, now_time.tv_nsec, sleep_time.tv_sec, sleep_time.tv_nsec);
 	SHBATT_TRACE("[P] %s(): shbatt_timer_restarted=%d diff_time=%d\n",__FUNCTION__, shbatt_timer_restarted, diff_time);
 
-	if((shbatt_timer_restarted == false) && (diff_time > 4200))
+	if((shbatt_timer_restarted == false) && (diff_time > soc_poll_failsafe))
 	{
+		int i, timer_in_use = 0;
+
 		shbatt_timer_restarted = true;
 		memset( &set_time,0x00, sizeof( set_time ) );
 		set_time.tv64 = SHBATT_TIMER_FG_PERIOD_NS;
-		shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC].prm = 0;
-		alarm_cancel( &(shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC].alm.alarm_timer) );
-		alarm_start_relative( &(shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC].alm.alarm_timer),
-							set_time);
+
+		timer_in_use = 0;
+		for(i=0;i<=SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_SLEEP_MULTI;i++)
+		{
+			SHBATT_TRACE("[P] %s : Timer[%d]=%d\n",__FUNCTION__,i,shbatt_poll_timer[i].in_use);
+			if(shbatt_poll_timer[i].in_use)
+				timer_in_use |= BIT(i);
+		}
+		SHBATT_TRACE("[P] %s : Timer use=0x%x\n",__FUNCTION__,timer_in_use);
+		switch(timer_in_use)
+		{
+			case USB_SOC:
+				shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC].prm = 0;
+				alarm_cancel( &(shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC].alm.alarm_timer) );
+				alarm_start_relative( &(shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC].alm.alarm_timer), set_time);
+					SHBATT_TRACE("[P] %s : Cancel and set timer=%d(use:%d)\n",__FUNCTION__,
+									SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC,
+									shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC].in_use);
+					/* Use same timer, so need not to update in_use */
+				break;
+			case USE_SOC_MULTI:
+				shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_MULTI].prm = 0;
+				alarm_cancel( &(shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_MULTI].alm.alarm_timer) );
+				alarm_start_relative( &(shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_MULTI].alm.alarm_timer), set_time);
+					SHBATT_TRACE("[P] %s : Cancel and set timer=%d(use:%d)\n",__FUNCTION__,
+									SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_MULTI,
+									shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_MULTI].in_use);
+					/* Use same timer, so need not to update in_use */
+				break;
+			case USE_SOC_SLEEP:
+				hrtimer_cancel( &(shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_SLEEP].alm.hr_timer) );
+				shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_SLEEP].in_use = 0;
+				alarm_start_relative( &(shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC].alm.alarm_timer), set_time);
+				shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC].in_use = 1;
+					SHBATT_TRACE("[P] %s : Cancel timer=%d(use:%d) and set timer=%d(use:%d)\n",__FUNCTION__,
+									SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_SLEEP,
+									shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_SLEEP].in_use,
+									SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC,
+									shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC].in_use);
+				break;
+			case USE_SOC_SLEEP_MULTI:
+				hrtimer_cancel( &(shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_SLEEP_MULTI].alm.hr_timer) );
+				shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_SLEEP_MULTI].in_use = 0;
+				alarm_start_relative( &(shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_MULTI].alm.alarm_timer), set_time);
+				shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_MULTI].in_use = 1;
+					SHBATT_TRACE("[P] %s : Cancel timer=%d(use:%d) and set timer=%d(use:%d)\n",__FUNCTION__,
+									SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_SLEEP_MULTI,
+									shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_SLEEP_MULTI].in_use,
+									SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_MULTI,
+									shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_MULTI].in_use);
+				break;
+			case USE_SOC_AND_SOC_SLEEP:
+				alarm_cancel( &(shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC].alm.alarm_timer) );
+				alarm_start_relative( &(shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC].alm.alarm_timer), set_time);
+					SHBATT_TRACE("[P] %s : Cancel and set timer=%d(use:%d)\n",__FUNCTION__,
+									SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC,
+									shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC].in_use);
+					/* Use same timer, so need not to update in_use */
+				break;
+			case USE_SOC_MULTI_AND_SOC_SLEEP_MULTI:
+				alarm_cancel( &(shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_MULTI].alm.alarm_timer) );
+				alarm_start_relative( &(shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_MULTI].alm.alarm_timer), set_time);
+					SHBATT_TRACE("[P] %s : Cancel and set timer=%d(use:%d)\n",__FUNCTION__,
+									SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_MULTI,
+									shbatt_poll_timer[SHBATT_POLL_TIMER_TYPE_FUELGAUGE_SOC_MULTI].in_use);
+					/* Use same timer, so need not to update in_use */
+				break;
+			default:
+				SHBATT_ERROR("%s : Invalid timer use(0x%x)\n",__FUNCTION__,timer_in_use);
+		}
 	}
 
 	SHBATT_TRACE("[E] %s \n",__FUNCTION__);

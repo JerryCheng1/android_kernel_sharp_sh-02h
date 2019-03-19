@@ -212,7 +212,10 @@ static uint64_t shub_get_time_ns(void)
     return timespec_to_ns(&ts);
 }
 
-static int shub_vibe_notify_check(int kind)
+/* SHMDS_HUB_0213_01 mod S */
+//static int shub_vibe_notify_check(int kind)
+int shub_vibe_notify_check(int kind)
+/* SHMDS_HUB_0213_01 mod E */
 {
     int check_ret = 0;
     mutex_lock(&shub_mutex_vibe);
@@ -1125,7 +1128,7 @@ int shub_set_default_parameter(void)
     param.m_iParam[10] = 30;    // SHMDS_HUB_0204_03 add
     param.m_iParam[11] = 200;   // SHMDS_HUB_0204_03 add
     param.m_iParam[12] = 0;     // SHMDS_HUB_0204_05 add
-    param.m_iParam[13] = 2;     // SHMDS_HUB_0204_16 mod (  1->2 )
+    param.m_iParam[13] = 0;     // SHMDS_HUB_0204_16 mod (  1->2->0 )
     ret = shub_set_param(param.m_iType, param.m_iParam);
     if(ret != 0) {
         printk( "[shub]%s set PEDOMETER_N error. ret=%d\n", __func__, ret);

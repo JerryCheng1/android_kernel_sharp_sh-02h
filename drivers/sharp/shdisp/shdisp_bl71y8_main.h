@@ -67,6 +67,9 @@ int shdisp_bdic_API_kerl_init(void);
 int  shdisp_bdic_API_shutdown(void);
 int  shdisp_bdic_API_set_active(void);
 int  shdisp_bdic_API_set_standby(void);
+#ifdef SHDISP_BDIC_PROHIBIT
+unsigned char shdisp_bdic_API_correct_proh_val(unsigned char);
+#endif /* SHDISP_BDIC_PROHIBIT */
 void shdisp_bdic_API_als_sensor_adjust(struct shdisp_photo_sensor_adj *adj);
 void shdisp_bdic_API_check_sensor_param(struct shdisp_photo_sensor_adj *adj_in, \
                                         struct shdisp_photo_sensor_adj *adj_out);

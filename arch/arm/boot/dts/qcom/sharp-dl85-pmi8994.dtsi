@@ -10,7 +10,7 @@
  * GNU General Public License for more details.
  */
 
-#include "sharp-dl83-chg-param.dtsi"
+#include "sharp-dl85-chg-param.dtsi"
 
 /*****************************************/
 /*  pmi8994-gpios: qpnp-pin               */

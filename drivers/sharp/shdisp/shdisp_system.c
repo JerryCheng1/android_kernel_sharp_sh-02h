@@ -181,6 +181,9 @@ void shdisp_SYS_API_delay_us(unsigned long usec)
 {
     struct timespec tu;
 
+    SHDISP_WAIT_LOG("wait start. expect = %ld.%ld(ms). caller = %pS",
+        (usec/1000), (usec%1000),__builtin_return_address(0));
+
     if (usec >= 1000 * 1000) {
         tu.tv_sec  = usec / 1000000;
         tu.tv_nsec = (usec % 1000000) * 1000;
@@ -191,7 +194,34 @@ void shdisp_SYS_API_delay_us(unsigned long usec)
 
     hrtimer_nanosleep(&tu, NULL, HRTIMER_MODE_REL, CLOCK_MONOTONIC);
 
+    SHDISP_WAIT_LOG("wait end.");
+    return;
+}
 
+/* ------------------------------------------------------------------------- */
+/* void shdisp_SYS_API_msleep                                                */
+/* ------------------------------------------------------------------------- */
+void shdisp_SYS_API_msleep(unsigned int msec)
+{
+    SHDISP_WAIT_LOG("wait start. expect = %u. caller = %pS",
+        msec,__builtin_return_address(0));
+    msleep(msec);
+
+    SHDISP_WAIT_LOG("wait end.");
+    return;
+}
+
+/* ------------------------------------------------------------------------- */
+/* void shdisp_SYS_API_usleep                                                */
+/* ------------------------------------------------------------------------- */
+void shdisp_SYS_API_usleep(unsigned int usec)
+{
+    SHDISP_WAIT_LOG("wait start. expect = %u.%u(ms). caller = %pS",
+        (usec/1000), (usec%1000),__builtin_return_address(0));
+
+    usleep(usec);
+
+    SHDISP_WAIT_LOG("wait end.");
     return;
 }
 
@@ -293,7 +323,7 @@ void shdisp_SYS_API_set_irq_port(int irq_port, struct platform_device *pdev)
 /* ------------------------------------------------------------------------- */
 /* shdisp_SYS_API_request_irq                                                */
 /* ------------------------------------------------------------------------- */
-int  shdisp_SYS_API_request_irq(irqreturn_t (*irq_handler)( int , void * ) )
+int shdisp_SYS_API_request_irq(irqreturn_t (*irq_handler)(int , void *))
 {
     int ret = SHDISP_RESULT_SUCCESS;
     if ((irq_handler == NULL)
@@ -314,7 +344,7 @@ int  shdisp_SYS_API_request_irq(irqreturn_t (*irq_handler)( int , void * ) )
 /* ------------------------------------------------------------------------- */
 /* shdisp_SYS_API_free_irq                                                   */
 /* ------------------------------------------------------------------------- */
-void  shdisp_SYS_API_free_irq(void)
+void shdisp_SYS_API_free_irq(void)
 {
     free_irq(shdisp_int_irq_port, NULL);
 }
@@ -322,7 +352,7 @@ void  shdisp_SYS_API_free_irq(void)
 /* ------------------------------------------------------------------------- */
 /* shdisp_SYS_API_set_irq_init                                               */
 /* ------------------------------------------------------------------------- */
-void  shdisp_SYS_API_set_irq_init(void)
+void shdisp_SYS_API_set_irq_init(void)
 {
     spin_lock_init( &shdisp_set_irq_spinlock );
 }
@@ -330,7 +360,7 @@ void  shdisp_SYS_API_set_irq_init(void)
 /* ------------------------------------------------------------------------- */
 /* shdisp_SYS_API_set_irq                                                    */
 /* ------------------------------------------------------------------------- */
-int  shdisp_SYS_API_set_irq( int enable )
+int shdisp_SYS_API_set_irq(int enable)
 {
     int ret = SHDISP_RESULT_SUCCESS;
     unsigned long flags = 0;
@@ -613,7 +643,7 @@ int  shdisp_SYS_API_bdic_i2c_multi_write(unsigned char addr, unsigned char *wval
     msg.buf      = write_buf;
     memset(write_buf, 0x00, sizeof(write_buf));
     write_buf[0] = addr;
-    memcpy( &write_buf[1], wval, (int)size );
+    memcpy(&write_buf[1], wval, (int)size);
     SHDISP_I2CLOG("(addr=0x%02X, size=0x%02X", addr, size);
     SHDISP_I2CLOG("*wval=%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X)",
                                 write_buf[1], write_buf[2], write_buf[3], write_buf[4], write_buf[5],
@@ -934,8 +964,7 @@ int shdisp_SYS_API_check_diag_mode(void)
     unsigned long bootmode;
 
     p_sharp_smem_common_type  = sh_smem_get_common_address();
-    if( p_sharp_smem_common_type != 0 )
-    {
+    if (p_sharp_smem_common_type != 0) {
         bootmode = p_sharp_smem_common_type->sh_boot_mode;
     } else {
         bootmode = 0;

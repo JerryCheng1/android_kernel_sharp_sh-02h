@@ -283,11 +283,14 @@
 };
 /* <= SH_AUDIO_DRIVER 18-003 */
 &spmi_bus {
-  qcom,pmi8994@3 {
-        pmi8994_haptics: qcom,haptic@c000 {
-                qcom,vmax-mv = <1624>;
-                };
-    };
+
+	qcom,pmi8994@3 {
+
+		pmi8994_haptics: qcom,haptic@c000 {
+				qcom,vmax-mv = <1624>; 
+				};
+	};
 };
+
 #include "sharp-dl85-pm8994.dtsi"
 #include "sharp-dl85-pmi8994.dtsi"

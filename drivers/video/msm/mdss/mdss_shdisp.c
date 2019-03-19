@@ -738,9 +738,11 @@ static int mdss_shdisp_video_transfer_ctrl_no_commit(struct msm_fb_data_type *mf
 /* ----------------------------------------------------------------------- */
 void mdss_shdisp_video_transfer_ctrl_set_flg(struct msm_fb_data_type *mfd, bool change)
 {
-	if (mdss_shdisp_video_transfer_ctrl_kickoff_flg != change) {
-		mdss_shdisp_video_transfer_ctrl_kickoff_flg = change;
-		pr_debug("%s : video_transfer_ctrl_kickoff_flg=%d\n", __func__, change);
+	if ((mfd->panel.type == MIPI_VIDEO_PANEL) ||
+		(mfd->panel.type == MIPI_CMD_PANEL)) {
+		if (mdss_shdisp_video_transfer_ctrl_kickoff_flg != change) {
+			mdss_shdisp_video_transfer_ctrl_kickoff_flg = change;
+		}
 	}
 }
 

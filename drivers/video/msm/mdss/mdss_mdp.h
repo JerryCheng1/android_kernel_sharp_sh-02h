@@ -45,6 +45,11 @@
 #define HORSCALER_NUM_FILTER_TAPS	8
 #define HORSCALER_COEFF_NUM		17
 #define MDP_MIN_VBP		4
+#ifdef CONFIG_SHDISP /* CUST_ID_00070 */
+#ifndef SHDISP_DISABLE_HR_VIDEO
+#define MDP_MIN_FETCH		9
+#endif /* SHDISP_DISABLE_HR_VIDEO */
+#endif /* CONFIG_SHDISP */
 #define MAX_FREE_LIST_SIZE	12
 #define OVERLAY_MAX		10
 
@@ -1162,4 +1167,15 @@ void mdss_mdp_latency_deny_collapse(void);
 void mdss_mdp_latency_allow_collapse(void);
 #endif /* CONFIG_SHDISP */
 
+#ifdef CONFIG_SHDISP /* CUST_ID_00070 */
+#ifndef SHDISP_DISABLE_HR_VIDEO
+int mdss_mdp_hr_video_addr_setup(struct mdss_data_type *mdata,
+		u32 *offsets,  u32 count);
+int mdss_mdp_hr_video_start(struct mdss_mdp_ctl *ctl);
+void *mdss_mdp_hr_get_intf_base_addr(struct mdss_data_type *mdata,
+		u32 interface_id);
+int mdss_mdp_hr_video_reconfigure_splash_done(struct mdss_mdp_ctl *ctl,
+		bool handoff);
+#endif /* SHDISP_DISABLE_HR_VIDEO */
+#endif /* CONFIG_SHDISP */
 #endif /* MDSS_MDP_H */

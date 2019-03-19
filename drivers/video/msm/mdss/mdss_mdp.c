@@ -2635,7 +2635,11 @@ static int mdss_mdp_parse_dt_video_intf(struct platform_device *pdev)
 	if (rc)
 		goto parse_fail;
 
+#if defined(CONFIG_SHDISP) && !defined(SHDISP_DISABLE_HR_VIDEO) /* CUST_ID_00070 */
+	rc = mdss_mdp_hr_video_addr_setup(mdata, offsets, count);
+#else  /* CONFIG_SHDISP */
 	rc = mdss_mdp_video_addr_setup(mdata, offsets, count);
+#endif /* CONFIG_SHDISP */
 	if (rc)
 		pr_err("unable to setup video interfaces\n");
 
@@ -3272,7 +3276,7 @@ int mdss_panel_get_boot_cfg(void)
 
 	if (!mdss_res || !mdss_res->pan_cfg.init_done)
 		return -EPROBE_DEFER;
-	if (mdss_res->pan_cfg.lk_cfg)
+	if (mdss_res->handoff_pending)
 		rc = 1;
 	else
 		rc = 0;

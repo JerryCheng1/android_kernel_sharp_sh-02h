@@ -282,12 +282,9 @@ static bool __ref msm_pm_spm_power_collapse(
 			cpu, __func__, entry);
 
 #ifdef CONFIG_SHSYS_CUST_DEBUG
-	if (!from_idle && notify_rpm)
+	if ((!from_idle && notify_rpm)&&(cpu_online(cpu)))
 	{
-		if((cpu == 0) || ((cpu == 1) && (sh_pm_debug_mask & SH_PM_DEBUG_CPU1_PC)))
-		{
-			pr_info( "%s(): [CPU%u] Enter suspend power collapse.\n", __func__, cpu );
-		}
+		pr_info( "%s(): [CPU%u] Enter suspend power collapse.\n", __func__, cpu );
 	}
 #endif /* CONFIG_SHSYS_CUST_DEBUG */
 
@@ -306,10 +303,7 @@ static bool __ref msm_pm_spm_power_collapse(
 #ifdef CONFIG_SHSYS_CUST_DEBUG
 	if (!from_idle && notify_rpm)
 	{
-		if((cpu == 0) || ((cpu == 1) && (sh_pm_debug_mask & SH_PM_DEBUG_CPU1_PC)))
-		{
-			pr_info( "%s(): [CPU%u] Exit suspend power collapse. ret = %d\n", __func__, cpu, collapsed );
-		}
+		pr_info( "%s(): [CPU%u] Exit suspend power collapse. ret = %d\n", __func__, cpu, collapsed );
 	}
 #endif /* CONFIG_SHSYS_CUST_DEBUG */
 

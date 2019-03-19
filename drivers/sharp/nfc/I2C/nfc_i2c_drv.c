@@ -1190,6 +1190,9 @@ static int nfc_i2c_read_thread ( void  *arg )
             len =( buffer[0] << 8 ) | buffer[1];
         }
         if ( len > 0 ){
+            if (len > 254){
+                usleep_range(500, 500);
+            }
             while ( len ) {
                 if ( len > MAX_CLF_PACKET_LENGTH ){
                     ret = MAX_CLF_PACKET_LENGTH;

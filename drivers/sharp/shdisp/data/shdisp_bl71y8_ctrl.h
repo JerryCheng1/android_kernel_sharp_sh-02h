@@ -19,21 +19,7 @@
 /* INCLUDE FILES                                                             */
 /* ------------------------------------------------------------------------- */
 #include "shdisp_bl71y8_cmn.h"
-#if defined(SHDISP_MODEL_FS)
-#include "shdisp_bl71y8_data_fs.h"
-#elif defined(SHDISP_MODEL_MID)
- #if defined(SHDISP_PA)
-#include "shdisp_bl71y8_data_mid_pa.h"
- #elif defined(SHDISP_DL)
-#include "shdisp_bl71y8_data_mid_dl.h"
- #elif defined(SHDISP_AL)
-#include "shdisp_bl71y8_data_mid_al.h"
- #else /* SHDISP_PA */
-#include "shdisp_bl71y8_data_mid.h"
- #endif /* SHDISP_PA */
-#else /* SHDISP_MODEL_FS */
-#include "shdisp_bl71y8_data_default.h"
-#endif /* SHDISP_MODEL_FS */
+#include "shdisp_bl71y8_data.h"
 
 /* ------------------------------------------------------------------------- */
 /* VARIABLES                                                                 */
@@ -45,7 +31,7 @@ static const shdisp_bdicRegSetting_t shdisp_bdic_vsn_on_ts1[] = {
 };
 
 static const shdisp_bdicRegSetting_t shdisp_bdic_vsn_on_ts2[] = {
-     {BDIC_REG_SYSTEM2,             SHDISP_BDIC_RMW,    0x10,                       0x50, 20 * 1000}
+     {BDIC_REG_SYSTEM2,             SHDISP_BDIC_RMW,    0x10,                       0x50,      0}
 };
 
 static const shdisp_bdicRegSetting_t shdisp_bdic_vsn_off[] = {
@@ -399,7 +385,7 @@ static const shdisp_bdicRegSetting_t shdisp_bdic_i2ctimer_start[] = {
 };
 
 static const shdisp_bdicRegSetting_t shdisp_bdic_dcdc1_err[] = {
-     {BDIC_REG_SYSTEM1,             SHDISP_BDIC_CLR,    0x00,                       0x01,       0}
+     {BDIC_REG_SYSTEM1,             SHDISP_BDIC_CLR,    0x00,                       0x03,       0}
 };
 
 static shdisp_bdicRegSetting_t const shdisp_bdic_reg_ar_ctrl[] = {

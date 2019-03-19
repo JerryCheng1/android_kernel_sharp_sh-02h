@@ -87,6 +87,9 @@ static void shub_set_abs_params(void);
 #endif // SHMDS_HUB_0601_01 del E
 static int32_t currentActive;
 
+static int32_t input_rot_mag[INDEX_SUM]= {0}; /* SHMDS_HUB_0321_01 add */
+static bool input_flg = false; /* SHMDS_HUB_0321_01 add */
+
 static struct hrtimer poll_timer;
 extern int32_t setMaxBatchReportLatency(uint32_t sensor, int64_t latency);
 
@@ -303,6 +306,16 @@ static long shub_ioctl_wrapper(struct file *filp, unsigned int cmd, unsigned lon
     return ret;
 }
 // SHMDS_HUB_1101_01 add E
+/* SHMDS_HUB_0321_01 add S */
+static struct timespec shub_local_ts;
+static struct timespec shub_get_timestamp(void)
+{
+    struct timespec ts;
+    ktime_get_ts(&ts);
+    monotonic_to_bootbased(&ts);
+    return ts;
+}
+/* SHMDS_HUB_0321_01 add E */
 
 static void shub_sensor_poll_work_func(struct work_struct *work)
 {
@@ -311,7 +324,15 @@ static void shub_sensor_poll_work_func(struct work_struct *work)
         mutex_lock(&shub_lock);
         shub_qos_start();    // SHMDS_HUB_1101_01 add
         shub_get_sensors_data(SHUB_ACTIVE_SENSOR, xyz);
-        shub_input_report_rot_mag(xyz);
+/* SHMDS_HUB_0321_01 add S */
+        input_rot_mag[0] = xyz[0];
+        input_rot_mag[1] = xyz[1];
+        input_rot_mag[2] = xyz[2];
+        input_rot_mag[3] = xyz[3];
+        input_rot_mag[4] = xyz[4];
+        input_flg = true;   
+//        shub_input_report_rot_mag(xyz);
+/* SHMDS_HUB_0321_01 add E */
         shub_qos_end();      // SHMDS_HUB_1101_01 add
         mutex_unlock(&shub_lock);
     }
@@ -320,6 +341,16 @@ static void shub_sensor_poll_work_func(struct work_struct *work)
 static enum hrtimer_restart shub_sensor_poll(struct hrtimer *tm)
 {
     schedule_work(&sensor_poll_work);
+/* SHMDS_HUB_0321_01 add S */
+    shub_local_ts = shub_get_timestamp();
+    if(input_flg){
+        input_rot_mag[5] = shub_local_ts.tv_sec;
+        input_rot_mag[6] = shub_local_ts.tv_nsec;
+        shub_input_report_rot_mag(input_rot_mag);
+    }else{
+        DBG_GEORV_DATA("not report\n");
+    }
+/* SHMDS_HUB_0321_01 add E */
     hrtimer_forward_now(&poll_timer, ns_to_ktime((int64_t)delay * NSEC_PER_MSEC));
     return HRTIMER_RESTART;
 }
@@ -389,6 +420,7 @@ static void shub_set_sensor_poll(int32_t en)
 {
     hrtimer_cancel(&poll_timer);
     if(en){
+        input_flg = false; /* SHMDS_HUB_0321_01 add */
         hrtimer_start(&poll_timer, ns_to_ktime((int64_t)delay * NSEC_PER_MSEC), HRTIMER_MODE_REL);
     }
 }

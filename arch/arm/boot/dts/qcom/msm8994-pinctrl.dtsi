@@ -1343,7 +1343,10 @@
 		};
 
 		pmx_pri_mi2s_sleep {
-			qcom,pins = <&gp 65>, <&gp 66>;
+/* SH_AUDIO_DRIVER -> */ /*20-009*/
+//			qcom,pins = <&gp 65>, <&gp 66>;
+			qcom,pins = <&gp 121>, <&gp 122>;
+/* SH_AUDIO_DRIVER <- */ /*20-009*/
 			qcom,num-grp-pins = <2>;
 			qcom,pin-func = <0>;
 			label = "pri_mi2s_sleep";
@@ -1366,28 +1369,30 @@
 			};
 		};
 
-		pmx_pri_mi2s_sd0_sleep {
-			qcom,pins = <&gp 67>;
-			qcom,num-grp-pins = <1>;
-			qcom,pin-func = <0>;
-			label = "pri_mi2s_sd0_sleep";
-			pri_mi2s_sd0_sleep: pri_mi2s_sd0_sleep {
-				drive-strength = <2>;	/* 2 mA */
-				bias-pull-down;		/* PULL DOWN */
-				input-enable;
-			};
-		};
-
-		pmx_pri_mi2s_sd0_active {
-			qcom,pins = <&gp 67>;
-			qcom,num-grp-pins = <1>;
-			qcom,pin-func = <1>;
-			label = "pri_mi2s_sd0_active";
-			pri_mi2s_sd0_active: pri_mi2s_sd0_active {
-				drive-strength = <2>;	/* 2 mA */
-				bias-disable;		/* NO PULL */
-			};
-		};
+// fpsensor-S
+//		pmx_pri_mi2s_sd0_sleep {
+//			qcom,pins = <&gp 67>;
+//			qcom,num-grp-pins = <1>;
+//			qcom,pin-func = <0>;
+//			label = "pri_mi2s_sd0_sleep";
+//			pri_mi2s_sd0_sleep: pri_mi2s_sd0_sleep {
+//				drive-strength = <2>;	/* 2 mA */
+//				bias-pull-down;		/* PULL DOWN */
+//				input-enable;
+//			};
+//		};
+//
+//		pmx_pri_mi2s_sd0_active {
+//			qcom,pins = <&gp 67>;
+//			qcom,num-grp-pins = <1>;
+//			qcom,pin-func = <1>;
+//			label = "pri_mi2s_sd0_active";
+//			pri_mi2s_sd0_active: pri_mi2s_sd0_active {
+//				drive-strength = <2>;	/* 2 mA */
+//				bias-disable;		/* NO PULL */
+//			};
+//		};
+// fpsensor-E
 
 		tsif0_signals {
 			qcom,pins = <&gp 89>,	/* TSIF0 CLK */

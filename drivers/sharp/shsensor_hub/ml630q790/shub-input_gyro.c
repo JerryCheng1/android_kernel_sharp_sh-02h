@@ -85,6 +85,12 @@ static void shub_set_abs_params(void);
 #endif // SHMDS_HUB_0601_01 del E
 static int32_t currentActive;
 
+/* SHMDS_HUB_0321_01 add S */
+static int32_t input_gyro[INDEX_SUM]= {0};
+static int32_t input_flg = 0;
+static int32_t xyz_gyro_uc[9]= {0};
+/* SHMDS_HUB_0321_01 add E */
+
 static struct hrtimer poll_timer;
 extern int32_t setMaxBatchReportLatency(uint32_t sensor, int64_t latency);
 
@@ -122,12 +128,14 @@ static long shub_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
                 //set mcu sensor measure
                 ret = shub_activate( SHUB_ACTIVE_SENSOR, tmpval);
                 currentActive = shub_get_current_active() & SHUB_ACTIVE_SENSOR;
-                //set polling start 
-                shub_set_sensor_poll(tmpval);
+                /* SHMDS_HUB_0324_01 mod S */
 
                 //batch stop 
                 ret = shub_activate_logging(SHUB_ACTIVE_SENSOR, 0);
                 setMaxBatchReportLatency(SHUB_ACTIVE_SENSOR, 0);
+                //set polling start 
+                shub_set_sensor_poll(tmpval);
+                /* SHMDS_HUB_0324_01 mod E */
             }
             if(ret != -1){
                 power_state = tmpval;
@@ -368,7 +376,6 @@ static void shub_sensor_poll_work_func(struct work_struct *work)
 //        shub_get_sensors_data(SHUB_ACTIVE_SENSOR, xyz);
         if((shub_get_sensor_activate_info(SHUB_SAME_NOTIFY_GYRO) == GYRO_GROUP_MASK) && (shub_get_sensor_same_delay_flg(SHUB_SAME_NOTIFY_GYRO) == 1)){
             if(shub_get_sensor_first_measure_info(SHUB_SAME_NOTIFY_GYRO) & SHUB_ACTIVE_SENSOR) {
-                int32_t xyz_gyro_uc[9]= {0};
                 struct timespec tmp_ts;
 /* SHMDS_HUB_0311_02 mod S */
                 int64_t local_ts_ns;
@@ -382,27 +389,42 @@ static void shub_sensor_poll_work_func(struct work_struct *work)
                     xyz_gyro_uc[8] = tmp_ts.tv_nsec;
                 }
                 else {
+                    input_flg = 0; /* SHMDS_HUB_0321_01 add */
                     shub_work_busy_flg = false;
                     shub_qos_end();      // SHMDS_HUB_1101_01 add
                     mutex_unlock(&shub_lock);
                     return ;
                 }
-                xyz[0] = xyz_gyro_uc[0] - xyz_gyro_uc[4];
-                xyz[1] = xyz_gyro_uc[1] - xyz_gyro_uc[5];
-                xyz[2] = xyz_gyro_uc[2] - xyz_gyro_uc[6];
-                xyz[3] = xyz_gyro_uc[3];
-                xyz[4] = xyz_gyro_uc[7];
-                xyz[5] = xyz_gyro_uc[8];
-                shub_input_report_gyro(xyz);
-                shub_input_report_gyro_uncal(xyz_gyro_uc);
+/* SHMDS_HUB_0321_01 add S */
+                input_gyro[0] = xyz_gyro_uc[0] - xyz_gyro_uc[4];
+                input_gyro[1] = xyz_gyro_uc[1] - xyz_gyro_uc[5];
+                input_gyro[2] = xyz_gyro_uc[2] - xyz_gyro_uc[6];
+                input_gyro[3] = xyz_gyro_uc[3];
+//                input_gyro[4] = xyz_gyro_uc[7];
+//                input_gyro[5] = xyz_gyro_uc[8];
+//                shub_input_report_gyro(xyz);
+//                shub_input_report_gyro_uncal(xyz_gyro_uc);
+                input_flg = 2;
                 shub_local_ts_ns_old = local_ts_ns;		/* SHMDS_HUB_0311_02 add */
+            }else{
+                input_flg = 0;
             }
+/* SHMDS_HUB_0321_01 add E */
         }
         else {
             shub_get_sensors_data(SHUB_ACTIVE_SENSOR, xyz);
             shub_normal_last_ts.tv_sec = xyz[4];
             shub_normal_last_ts.tv_nsec = xyz[5];
-            shub_input_report_gyro(xyz);
+/* SHMDS_HUB_0321_01 add S */
+            input_gyro[0] = xyz[0];
+            input_gyro[1] = xyz[1];
+            input_gyro[2] = xyz[2];
+            input_gyro[3] = xyz[3];
+//            input_gyro[4] = xyz[4];
+//            input_gyro[5] = xyz[5];
+//          shub_input_report_gyro(xyz);
+            input_flg = 1;
+/* SHMDS_HUB_0321_01 add E */
             shub_local_ts_ns_old = 0;		/* SHMDS_HUB_0311_02 add */
         }
 /* SHMDS_HUB_0311_01 mod E */
@@ -425,6 +447,22 @@ static enum hrtimer_restart shub_sensor_poll(struct hrtimer *tm)
     }
     shub_local_ts = shub_get_timestamp();
     /* SHMDS_HUB_0311_01 add E */
+/* SHMDS_HUB_0321_01 add S */
+    if(input_flg == 1) {
+        input_gyro[4] = shub_local_ts.tv_sec;
+        input_gyro[5] = shub_local_ts.tv_nsec;
+        shub_input_report_gyro(input_gyro);
+    }else if(input_flg == 2){
+        input_gyro[4] = shub_local_ts.tv_sec;
+        input_gyro[5] = shub_local_ts.tv_nsec;
+        xyz_gyro_uc[7] = shub_local_ts.tv_sec;
+        xyz_gyro_uc[8] = shub_local_ts.tv_nsec;
+        shub_input_report_gyro(input_gyro);
+        shub_input_report_gyro_uncal(xyz_gyro_uc);
+    }else{
+        DBG_GYRO_DATA("not report\n");
+    }
+/* SHMDS_HUB_0321_01 add E */
     schedule_work(&sensor_poll_work);
     hrtimer_forward_now(&poll_timer, ns_to_ktime((int64_t)delay * NSEC_PER_MSEC));
     return HRTIMER_RESTART;
@@ -493,6 +531,7 @@ static void shub_set_sensor_poll(int32_t en)
 {
     hrtimer_cancel(&poll_timer);
     if(en){
+        input_flg = 0; /* SHMDS_HUB_0321_01 add */
         hrtimer_start(&poll_timer, ns_to_ktime((int64_t)delay * NSEC_PER_MSEC), HRTIMER_MODE_REL);
     }
 }

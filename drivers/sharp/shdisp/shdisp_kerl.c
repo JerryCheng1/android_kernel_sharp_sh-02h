@@ -116,6 +116,8 @@ extern void mdss_shdisp_fps_led_stop(void);
 #if defined(CONFIG_ANDROID_ENGINEERING)
 #if defined(CONFIG_SHDISP_PANEL_HAYABUSA)
 #define SHDISP_FPS_LED_PANEL_SUPPORT
+#elif defined(CONFIG_SHDISP_PANEL_ANDY)
+#define SHDISP_FPS_LED_HOST_SUPPORT
 #endif /* CONFIG_SHDISP_PANEL_HAYABUSA */
 #endif /* CONFIG_ANDROID_ENGINEERING */
 
@@ -411,7 +413,7 @@ static void shdisp_SQE_lcd_det_recovery(void);
 #endif  /* SHDISP_NOT_SUPPORT_DET */
 static int shdisp_SQE_psals_recovery(void);
 
-static irqreturn_t shdisp_gpio_int_isr( int irq_num, void *data );
+static irqreturn_t shdisp_gpio_int_isr(int irq_num, void *data);
 static void shdisp_workqueue_handler_gpio(struct work_struct *work);
 static void shdisp_workqueue_gpio_task(struct work_struct *work);
 static int shdisp_do_detin_recovery(void);
@@ -1147,7 +1149,7 @@ int shdisp_api_prox_sensor_pow_ctl(int power_mode, struct shdisp_prox_params *pr
         return SHDISP_RESULT_FAILURE;
     }
 
-    SHDISP_DEBUG(":power_mode=%d", power_mode );
+    SHDISP_DEBUG(":power_mode=%d", power_mode);
 
     if (power_mode == SHDISP_PROX_SENSOR_POWER_ON) {
         if (prox_params == NULL) {
@@ -1696,7 +1698,6 @@ static void shdisp_get_boot_context(void)
     } else {
         memcpy(&(shdisp_kerl_ctx.boot_ctx), &sh_smem_common->shdisp_data_buf, sizeof(struct shdisp_boot_context));
     }
-
     return;
 }
 
@@ -2311,7 +2312,7 @@ static int shdisp_ioctl_set_illumi_triple_color(void __user *argp)
                      illumi_triple_color.colors[i].green, illumi_triple_color.colors[i].blue);
     }
     SHDISP_DEBUG("count = %d", illumi_triple_color.count);
-    
+
     ret = shdisp_SQE_set_illumi_triple_color(&illumi_triple_color);
 
     shdisp_semaphore_end(__func__);
@@ -2496,7 +2497,7 @@ static int shdisp_ioctl_get_lux(void __user *argp)
 
     ret = shdisp_SQE_get_lux(&(val));
 
-    SHDISP_DEBUG(" value=0x%04X, lux=%u, mode=%d", val.value, val.lux, val.mode );
+    SHDISP_DEBUG(" value=0x%04X, lux=%u, mode=%d", val.value, val.lux, val.mode);
 
     if (ret != SHDISP_RESULT_SUCCESS) {
         SHDISP_ERR("<RESULT_FAILURE> shdisp_SQE_get_lux.");
@@ -3816,7 +3817,7 @@ static int shdisp_SQE_tri_led_on(int no, struct shdisp_tri_led *led)
         return SHDISP_RESULT_SUCCESS;
     }
 
-    switch(no) {
+    switch (no) {
     case SYSFS_LED_SH_LED_1:
         sys_led = shdisp_kerl_ctx.sysfs_led1;
         break;
@@ -3831,7 +3832,7 @@ static int shdisp_SQE_tri_led_on(int no, struct shdisp_tri_led *led)
 
      if ((sys_led.red   == led->red) &&
         (sys_led.green == led->green) &&
-        (sys_led.blue  == led->blue)){
+        (sys_led.blue  == led->blue)) {
         SHDISP_DEBUG("same leds request.");
         return SHDISP_RESULT_SUCCESS;
     }
@@ -3848,7 +3849,7 @@ static int shdisp_SQE_tri_led_on(int no, struct shdisp_tri_led *led)
         shdisp_clean_normal_led();
     }
 
-    switch(no) {
+    switch (no) {
     case SYSFS_LED_SH_LED_1:
         shdisp_kerl_ctx.sysfs_led1 = *led;
         break;
@@ -4265,7 +4266,7 @@ static int shdisp_SQE_set_illumi_triple_color(struct shdisp_illumi_triple_color 
     shdisp_kerl_ctx.tri_led.green = illumi_triple_color->colors[ILLUMI_FRAME_FIRST].green;
     shdisp_kerl_ctx.tri_led.blue = illumi_triple_color->colors[ILLUMI_FRAME_FIRST].blue;
     shdisp_kerl_ctx.tri_led.led_mode = SHDISP_TRI_LED_MODE_ILLUMI_TRIPLE_COLOR;
-    
+
     return ret;
 }
 #endif /* SHDISP_ILLUMI_TRIPLE_COLOR_LED && SHDISP_ANIME_COLOR_LED */
@@ -4625,14 +4626,14 @@ static int shdisp_SQE_do_recovery(void)
     shdisp_kerl_ctx.main_disp_status = SHDISP_MAIN_DISP_OFF;
 
 #if defined(CONFIG_SHDISP_PANEL_ANDY)
-    msleep(500);
+    shdisp_SYS_API_msleep(500);
 #elif defined(CONFIG_SHDISP_PANEL_ARIA)
-    msleep(40);
+    shdisp_SYS_API_msleep(40);
 #elif defined(CONFIG_SHDISP_PANEL_HAYABUSA)
-    msleep(100);
+    shdisp_SYS_API_msleep(100);
 #else  /* CONFIG_SHDISP_PANEL_XXXX */
 #warning "unknown panel!!!"
-    msleep(500);
+    shdisp_SYS_API_msleep(500);
 #endif  /* CONFIG_SHDISP_PANEL */
 
 #if defined(CONFIG_SHDISP_PANEL_ARIA) || defined(CONFIG_SHDISP_PANEL_HAYABUSA)
@@ -4656,7 +4657,7 @@ static int shdisp_SQE_do_recovery(void)
 
 #if defined(CONFIG_SHDISP_PANEL_ARIA) || defined(CONFIG_SHDISP_PANEL_HAYABUSA)
     mdss_shdisp_cmd_tearcheck_enable(true);
-    msleep(17);
+    shdisp_SYS_API_msleep(17);
 #endif  /* CONFIG_SHDISP_PANEL */
 
 #if defined(CONFIG_SHDISP_PANEL_ANDY)
@@ -4979,7 +4980,7 @@ static int shdisp_SQE_psals_recovery(void)
     if (ps_flg == SHDISP_DEV_STATE_ON) {
 
         /* notify to proximity module that recovery is ending */
-        msleep(20);
+       shdisp_SYS_API_msleep(20);
 #ifdef CONFIG_PROXIMITY_INT_HOST
         PROX_recovery_end_func();
 #endif /* CONFIG_PROXIMITY_INT_HOST */
@@ -5025,8 +5026,6 @@ static int shdisp_SQE_vcom_tracking(int tracking)
 
 #if defined(CONFIG_SHDISP_PANEL_ANDY)
     ret = shdisp_andy_API_vcom_tracking(tracking);
-#elif defined(CONFIG_SHDISP_PANEL_HAYABUSA)
-    ret = shdisp_hayabusa_API_vcom_tracking(tracking);
 #else /* CONFIG_SHDISP_PANEL_ANDY */
     ret = SHDISP_RESULT_SUCCESS;
 #endif /* CONFIG_SHDISP_PANEL_ANDY */
@@ -5061,7 +5060,7 @@ static void shdisp_semaphore_end(const char *func)
 /* ------------------------------------------------------------------------- */
 /* shdisp_gpio_int_isr                                                       */
 /* ------------------------------------------------------------------------- */
-static irqreturn_t shdisp_gpio_int_isr( int irq_num, void *data )
+static irqreturn_t shdisp_gpio_int_isr(int irq_num, void *data)
 {
     irqreturn_t rc = IRQ_HANDLED;
     int ret;
@@ -5117,7 +5116,7 @@ static void shdisp_workqueue_handler_gpio(struct work_struct *work)
             }
 
             if (shdisp_wq_gpio_task) {
-                qdata = kmalloc( sizeof(shdisp_queue_data), GFP_KERNEL );
+                qdata = kmalloc(sizeof(shdisp_queue_data), GFP_KERNEL);
                 if (qdata != NULL) {
                     qdata->irq_GFAC = nBDIC_QueFac;
                     list_add_tail(&qdata->list, &shdisp_queue_data.list);
@@ -5188,8 +5187,8 @@ static void shdisp_workqueue_gpio_task(struct work_struct *work)
         }
 
         if (entryFirst != NULL) {
-            list_del( &entryFirst->list );
-            kfree( entryFirst );
+            list_del(&entryFirst->list);
+            kfree(entryFirst);
         } else {
             SHDISP_DEBUG("no entry");
             up(&shdisp_sem_irq_fac);
@@ -6024,7 +6023,7 @@ static int shdisp_event_unsubscribe(int irq_type)
 }
 
 /* ------------------------------------------------------------------------- */
-/* shdisp_event_subscribe                                                */
+/* shdisp_event_subscribe                                                    */
 /* ------------------------------------------------------------------------- */
 static int shdisp_event_subscribe(struct shdisp_subscribe *subscribe)
 {
@@ -6301,7 +6300,7 @@ static void shdisp_led_set_blue2(struct led_classdev *led_cdev, enum led_brightn
 #endif /* SHDISP_COLOR_LED_TWIN */
 
 /* ------------------------------------------------------------------------- */
-/* shdisp_clear_sysfs_led                                                     */
+/* shdisp_clear_sysfs_led                                                    */
 /* ------------------------------------------------------------------------- */
 static void shdisp_clean_sysfs_led(void) {
 
@@ -6317,7 +6316,7 @@ static void shdisp_clean_sysfs_led(void) {
 }
 
 /* ------------------------------------------------------------------------- */
-/* shdisp_clear_normal_led                                                     */
+/* shdisp_clear_normal_led                                                   */
 /* ------------------------------------------------------------------------- */
 static void shdisp_clean_normal_led(void) {
 
@@ -6758,6 +6757,8 @@ static int shdisp_proc_write(struct file *file, const char *buffer, unsigned lon
             prox_params.threshold_low  = (unsigned int)shdisp_pfs.par[1];
             prox_params.threshold_high = (unsigned int)shdisp_pfs.par[2];
 
+            shdisp_bdic_API_set_prox_sensor_param(&prox_params);
+
             ret = shdisp_SQE_prox_sensor_pow_ctl(SHDISP_PROX_SENSOR_POWER_ON);
             break;
         default:
@@ -6877,7 +6878,7 @@ static int shdisp_proc_write(struct file *file, const char *buffer, unsigned lon
     case SHDISP_DEBUG_LED_REG_DUMP:
         if (shdisp_pfs.par[0] == 1) {
             shdisp_bdic_API_TRI_LED2_INFO_output();
-        }else {
+        } else {
             shdisp_bdic_API_TRI_LED_INFO_output();
         }
         break;
@@ -6941,11 +6942,17 @@ static int shdisp_proc_write(struct file *file, const char *buffer, unsigned lon
         break;
 
     case SHDISP_DEBUG_FPS_LED:
-#ifdef SHDISP_FPS_LED_PANEL_SUPPORT
+#if defined(SHDISP_FPS_LED_PANEL_SUPPORT)
         if (shdisp_pfs.par[0]) {
             shdisp_fps_led_start();
         } else {
             shdisp_fps_led_stop();
+        }
+#elif defined(SHDISP_FPS_LED_HOST_SUPPORT)
+        if (shdisp_pfs.par[0]) {
+            mdss_shdisp_fps_led_start();
+        } else {
+            mdss_shdisp_fps_led_stop();
         }
 #endif /* SHDISP_FPS_LED_PANEL_SUPPORT */
         break;
@@ -7009,6 +7016,9 @@ static int shdisp_proc_write(struct file *file, const char *buffer, unsigned lon
         } else if (shdisp_pfs.par[0] == 4) {
             recovery_error_flag = SHDISP_DBG_RECOVERY_ERROR_DISPON_READ;
             printk("[SHDISP] set recovery check error disp on (read)\n");
+        } else if (shdisp_pfs.par[0] == 5) {
+            recovery_error_flag = SHDISP_DBG_BDIC_ERROR_DCDC1;
+            printk("[SHDISP] set bdic dcdc1 error\n");
         } else {
             recovery_error_flag = SHDISP_DBG_RECOVERY_ERROR_NONE;
             printk("[SHDISP] set recovery check error none\n");
@@ -7153,7 +7163,7 @@ out:
 /* ------------------------------------------------------------------------- */
 /* shdisp_proc_read                                                          */
 /* ------------------------------------------------------------------------- */
-static int shdisp_proc_read( char *page, char **start, off_t offset, int count, int *eof, void *data )
+static int shdisp_proc_read(char *page, char **start, off_t offset, int count, int *eof, void *data)
 {
     int len = 0;
 
@@ -7183,13 +7193,16 @@ static ssize_t shdisp_proc_file_read(struct file *file, char __user *buf, size_t
      * the offset entirely for writes..
      */
     pos = *ppos;
-    if (pos > MAX_NON_LFS)
+    if (pos > MAX_NON_LFS) {
         return 0;
-    if (nbytes > MAX_NON_LFS - pos)
+    }
+    if (nbytes > (MAX_NON_LFS - pos)) {
         nbytes = MAX_NON_LFS - pos;
+    }
 
-    if (!(page = (char*) __get_free_page(GFP_TEMPORARY)))
+    if (!(page = (char*) __get_free_page(GFP_TEMPORARY))) {
         return -ENOMEM;
+    }
 
     while ((nbytes > 0) && !eof) {
         count = min_t(size_t, PROC_BLOCK_SIZE, nbytes);
@@ -7198,8 +7211,9 @@ static ssize_t shdisp_proc_file_read(struct file *file, char __user *buf, size_t
         n = shdisp_proc_read(page, &start, *ppos,
                   count, &eof, NULL);
 
-        if (n == 0)   /* end of file */
+        if (n == 0) { /* end of file */
             break;
+        }
         if (n < 0) {  /* error */
             if (retval == 0)
                 retval = n;
@@ -7239,14 +7253,16 @@ static ssize_t shdisp_proc_file_read(struct file *file, char __user *buf, size_t
                        "proc_file_read: Apparent buffer overflow!\n");
                 n = PAGE_SIZE - startoff;
             }
-            if (n > count)
+            if (n > count) {
                 n = count;
+            }
         }
 
         n -= copy_to_user(buf, start < page ? page : start, n);
         if (n == 0) {
-            if (retval == 0)
+            if (retval == 0) {
                 retval = -EFAULT;
+            }
             break;
         }
 
@@ -7846,7 +7862,7 @@ static void shdisp_dbg_que(int kind)
             }
 
             if (shdisp_wq_gpio_task) {
-                qdata = kmalloc( sizeof(shdisp_queue_data), GFP_KERNEL );
+                qdata = kmalloc(sizeof(shdisp_queue_data), GFP_KERNEL);
                 if (qdata != NULL) {
                     qdata->irq_GFAC = nBDIC_QueFac;
                     list_add_tail(&qdata->list, &shdisp_queue_data.list);
@@ -7898,7 +7914,7 @@ static void shdisp_debug_subscribe(void)
 static void callback_ps(void)
 {
     printk("[SHDISP] callback_ps Start\n");
-    msleep(1000);
+    shdisp_SYS_API_msleep(1000);
     printk("[SHDISP] callback_ps Finish\n");
 }
 #endif /* CONFIG_ANDROID_ENGINEERING */
@@ -8002,7 +8018,7 @@ static int shdisp_input_subsystem_init(void)
     input_set_abs_params(shdisp_input_dev, ABS_MISC, 0, 9, 0, 0);
 
     ret = input_register_device(shdisp_input_dev);
-    if (ret < 0){
+    if (ret < 0) {
         SHDISP_ERR("can not register ls input device\n");
         input_free_device(shdisp_input_dev);
     }
@@ -8142,7 +8158,7 @@ static int __init shdisp_init(void)
     sema_init(&shdisp_sem, 1);
 
     sema_init(&shdisp_sem_callback, 1);
-    sema_init(&shdisp_sem_irq_fac, 1 );
+    sema_init(&shdisp_sem_irq_fac, 1);
     sema_init(&shdisp_sem_timer, 1);
     sema_init(&shdisp_sem_req_recovery_lcd, 1);
     sema_init(&shdisp_sem_req_recovery_psals, 1);
@@ -8258,7 +8274,7 @@ static int __init shdisp_init(void)
     shdisp_bdic_API_TRI_LED_set_request(&tri_led);
 
     if (shdisp_kerl_ctx.boot_ctx.bdic_is_exist == SHDISP_BDIC_IS_EXIST) {
-        ret = shdisp_SYS_API_request_irq( shdisp_gpio_int_isr );
+        ret = shdisp_SYS_API_request_irq(shdisp_gpio_int_isr);
     }
     if (ret) {
         goto shdisp_err_top;
@@ -8392,7 +8408,7 @@ static int shdisp_kerl_probe(struct platform_device *pdev)
 #ifdef CONFIG_OF
     int rc = SHDISP_RESULT_SUCCESS;
 
-    SHDISP_TRACE("in pdev = 0x%p", pdev );
+    SHDISP_TRACE("in pdev = 0x%p", pdev);
 
     if (pdev) {
         if (&(pdev->dev) != NULL) {
@@ -8430,7 +8446,7 @@ static int shdisp_kerl_probe(struct platform_device *pdev)
     } else {
         SHDISP_ERR("pdev is NULL");
     }
-    SHDISP_TRACE("out testmode_gpio = %d", testmode_gpio );
+    SHDISP_TRACE("out testmode_gpio = %d", testmode_gpio);
 
     return rc;
 #else   /* CONFIG_OF */

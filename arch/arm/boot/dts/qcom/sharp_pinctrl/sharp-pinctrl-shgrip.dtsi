@@ -26,11 +26,9 @@
 			qcom,num-grp-pins = <1>;
 			label = "grip_pin_pu";
 			grip_pu_active: active {
-				drive-strength = <2>;
 				bias-disable;
 			};
 			grip_pu_suspend: suspend {
-				drive-strength = <2>;
 				bias-disable;
 			};
 		};

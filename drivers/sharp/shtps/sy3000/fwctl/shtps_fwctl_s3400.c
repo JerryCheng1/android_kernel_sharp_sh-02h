@@ -2974,16 +2974,6 @@ static int shtps_fwctl_s3400_glove_enable(struct shtps_fwctl_info *fc_p)
 
 #if defined(SHTPS_GLOVE_DETECT_ENABLE)
 	if(fc_p->map_p->fn12.ctrl.support_object_glove != 0){
-		#if defined(SHTPS_DEF_GLOVE_CHANGE_LANDLIFTFILTER_ENABLE)
-			if(SHTPS_PRM_GLOVE_CHANGE_LLF_ENABLE == 1){
-				u8 buf[8];
-				ret = M_READ_PACKET_FUNC(fc_p, fc_p->map_p->fn12.ctrl.num[11].addr, buf, sizeof(buf));
-				if(ret >= 0){
-					buf[7] = SHTPS_PRM_GLOVE_CHANGE_LLF_LAND_LOCK_DISTANCE;
-					M_WRITE_PACKET_FUNC(fc_p, fc_p->map_p->fn12.ctrl.num[11].addr, buf, sizeof(buf));
-				}
-			}
-		#endif /* SHTPS_DEF_GLOVE_CHANGE_LANDLIFTFILTER_ENABLE */
 		fc_p->map_p->reg_F12_CTRL23_object_report_enable |= 0x20;
 		ret = M_WRITE_FUNC(fc_p, fc_p->map_p->fn12.ctrl.num[23].addr, fc_p->map_p->reg_F12_CTRL23_object_report_enable);
 	}else{
@@ -3002,16 +2992,6 @@ static int shtps_fwctl_s3400_glove_disable(struct shtps_fwctl_info *fc_p)
 
 #if defined(SHTPS_GLOVE_DETECT_ENABLE)
 	if(fc_p->map_p->fn12.ctrl.support_object_glove != 0){
-		#if defined(SHTPS_DEF_GLOVE_CHANGE_LANDLIFTFILTER_ENABLE)
-			if(SHTPS_PRM_GLOVE_CHANGE_LLF_ENABLE == 1){
-				u8 buf[8];
-				ret = M_READ_PACKET_FUNC(fc_p, fc_p->map_p->fn12.ctrl.num[11].addr, buf, sizeof(buf));
-				if(ret >= 0){
-					buf[7] = fc_p->map_p->reg_F12_CTRL11_val[7];
-					M_WRITE_PACKET_FUNC(fc_p, fc_p->map_p->fn12.ctrl.num[11].addr, buf, sizeof(buf));
-				}
-			}
-		#endif /* SHTPS_DEF_GLOVE_CHANGE_LANDLIFTFILTER_ENABLE */
 		fc_p->map_p->reg_F12_CTRL23_object_report_enable &= (~0x20);
 		ret = M_WRITE_FUNC(fc_p, fc_p->map_p->fn12.ctrl.num[23].addr, fc_p->map_p->reg_F12_CTRL23_object_report_enable);
 	}else{

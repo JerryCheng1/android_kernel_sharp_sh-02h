@@ -426,6 +426,7 @@ static char mipi_sh_hayabusa_cmd_MIPIBiasCurrentE0[2][2] = {
     {0x7E, 0xA0}
 };
 
+#if defined(SHDISP_MODEL_MID)
 static char mipi_sh_hayabusa_cmd_VP_HSSIVoltage[3][2] = {
     {0x38, 0x60},
     {0x39, 0x03},
@@ -436,6 +437,7 @@ static char mipi_sh_hayabusa_cmd_VDD_Voltage[2][2] = {
     {0x58, 0x90},
     {0x59, 0x99}
 };
+#endif /* SHDISP_MODEL_MID */
 
 #define RTN             (0x78)
 #define GIP             (0x62)
@@ -2258,9 +2260,11 @@ static struct shdisp_dsi_cmd_desc mipi_sh_hayabusa_cmds_initialE0_cut1_1[] = {
     {SHDISP_DTYPE_DCS_WRITE1, 2, mipi_sh_hayabusa_cmd_MIPIBiasCurrentE0[0],  0, 0},
     {SHDISP_DTYPE_DCS_WRITE1, 2, mipi_sh_hayabusa_cmd_MIPIBiasCurrentE0[1],  0, 0},
 
+#if defined(SHDISP_MODEL_MID)
     {SHDISP_DTYPE_DCS_WRITE1, 2, mipi_sh_hayabusa_cmd_VP_HSSIVoltage[0],  0, 0},
     {SHDISP_DTYPE_DCS_WRITE1, 2, mipi_sh_hayabusa_cmd_VP_HSSIVoltage[1],  0, 0},
     {SHDISP_DTYPE_DCS_WRITE1, 2, mipi_sh_hayabusa_cmd_VP_HSSIVoltage[2],  0, 0}
+#endif /* SHDISP_MODEL_MID */
 };
 
 /*      Initial Setting  Command F page 0                                   */
@@ -2275,11 +2279,13 @@ static struct shdisp_dsi_cmd_desc mipi_sh_hayabusa_cmds_initialF0[] = {
 
 };
 
+#if defined(SHDISP_MODEL_MID)
 /*      VDD Voltage                                                         */
 static struct shdisp_dsi_cmd_desc mipi_sh_hayabusa_cmds_vdd_voltage[] = {
     {SHDISP_DTYPE_DCS_WRITE1, 2, mipi_sh_hayabusa_cmd_VDD_Voltage[0], 0, 0},
     {SHDISP_DTYPE_DCS_WRITE1, 2, mipi_sh_hayabusa_cmd_VDD_Voltage[1], 0, 0}
 };
+#endif /* SHDISP_MODEL_MID */
 
 /*      FIFO Reset                                                          */
 static struct shdisp_dsi_cmd_desc mipi_sh_hayabusa_cmds_fifo_reset[] = {

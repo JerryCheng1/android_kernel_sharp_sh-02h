@@ -440,12 +440,12 @@ static ssize_t shcamled_torch_store(struct device *dev,
 		if( val == SHCAM_LED_TORCH_CURRENT ){
 			SHCAMLED_TRACE("%s(%d) wake_lock(shcamled_wake_lock)\n", __func__, __LINE__);
 			wake_lock(&shcamled_wake_lock);
-			pm_qos_update_request(&cam_pm_qos_request, 1);
+                        pm_qos_update_request(&cam_pm_qos_request,400);
 		}
 		else{
 			SHCAMLED_TRACE("%s(%d) wake_unlock(shcamled_wake_lock)\n", __func__, __LINE__);
 			wake_unlock(&shcamled_wake_lock);
-			pm_qos_update_request(&cam_pm_qos_request, PM_QOS_DEFAULT_VALUE);
+                        pm_qos_update_request(&cam_pm_qos_request,PM_QOS_DEFAULT_VALUE);
 		}
 		SHCAMLED_TRACE("%s done ret:%d\n", __FUNCTION__, proc_ret);
 	}

@@ -231,8 +231,6 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(usb_id_resistance),
 	POWER_SUPPLY_ATTR(temp_cold),
 	POWER_SUPPLY_ATTR(temp_hot),
-	POWER_SUPPLY_ATTR(direct_current),
-	POWER_SUPPLY_ATTR(direct_voltage),
 #endif /* CONFIG_BATTERY_SH */
 	/* Local extensions */
 	POWER_SUPPLY_ATTR(usb_hc),
@@ -243,9 +241,9 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(esr_count),
 	POWER_SUPPLY_ATTR(safety_timer_enabled),
 	POWER_SUPPLY_ATTR(charge_done),
-	POWER_SUPPLY_ATTR(allow_detection),
 	POWER_SUPPLY_ATTR(flash_active),
 	POWER_SUPPLY_ATTR(force_tlim),
+	POWER_SUPPLY_ATTR(allow_detection),
 	POWER_SUPPLY_ATTR(cycle_count_id),
 	/* Local extensions of type int64_t */
 	POWER_SUPPLY_ATTR(charge_counter_ext),

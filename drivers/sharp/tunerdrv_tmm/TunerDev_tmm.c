@@ -564,7 +564,7 @@ static int gpio_get(unsigned int id, int *val)
 static int tuner_vreg_enable(void)
 {
 	int	ret;
-#if 0
+#ifdef CONFIG_ARCH_LYNX_DL70
 	struct regulator *reg;
 	struct device *dev = tuner_dev.this_device;
 	const char *id = "pm8994_l27";
@@ -576,7 +576,11 @@ static int tuner_vreg_enable(void)
 	struct regulator *reg_28v;
 	struct device *dev_28v = tuner_dev.this_device;
 	const char *id_28v = "pm8994_l17";
+#ifdef CONFIG_ARCH_LYNX_DL70
+	int min_28v_uV = 2700000, max_28v_uV = 2700000;
+#else
 	int min_28v_uV = 2800000, max_28v_uV = 2800000;
+#endif
 
 	reg_28v = regulator_get(dev_28v, id_28v);
 	if (IS_ERR(reg_28v)) {
@@ -593,7 +597,7 @@ static int tuner_vreg_enable(void)
 	regulator_put(reg_28v);
 	/* --- */
 
-#if 0
+#ifdef CONFIG_ARCH_LYNX_DL70
 	msleep(1);
 
 	hw_revision_get( &hw_rev );
@@ -632,7 +636,7 @@ static int tuner_vreg_enable(void)
 static int tuner_vreg_disable(void)
 {
 	int	ret;
-#if 0
+#ifdef CONFIG_ARCH_LYNX_DL70
 	struct regulator *reg;
 	struct device *dev = tuner_dev.this_device;
 	const char *id = "pm8994_l27";
@@ -649,7 +653,7 @@ static int tuner_vreg_disable(void)
 	shterm_k_set_info( SHTERM_INFO_DTB, 0 );
 #endif
 
-#if 0
+#ifdef CONFIG_ARCH_LYNX_DL70
 	hw_revision_get( &hw_rev );
 	if ( hw_rev <= 1 ) {		/* ES0 and ES1 */
 		reg= regulator_get(dev, id);

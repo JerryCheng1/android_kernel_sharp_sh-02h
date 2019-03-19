@@ -11,6 +11,9 @@ obj-$(CONFIG_SHDISP) += shdisp_panel.o
 ifeq ($(CONFIG_SHDISP_PANEL_HAYABUSA),y)
 obj-$(CONFIG_SHDISP) += shdisp_hayabusa.o
 endif
+ifeq ($(CONFIG_SHDISP_PANEL_ANDY),y)
+obj-$(CONFIG_SHDISP) += shdisp_andy.o
+endif
 obj-$(CONFIG_SHDISP) += shdisp_dbg.o
 #obj-$(CONFIG_SHDISP) += shlcdc_eventlog.o
 EXTRA_CFLAGS    += -DSH_BUILD_ID=\"$(SH_BUILD_ID)\"

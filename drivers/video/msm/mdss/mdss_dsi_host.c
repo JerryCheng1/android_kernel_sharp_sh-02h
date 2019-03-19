@@ -78,6 +78,14 @@ static struct mdss_dsi_event dsi_event;
 
 static int dsi_event_thread(void *data);
 
+#ifdef CONFIG_SHDISP /* CUST_ID_00070 */
+#ifndef SHDISP_DISABLE_HR_VIDEO
+extern int mdss_mdp_hr_video_is_hw_tg_off(void);
+extern void mdss_mdp_hr_video_avoid_toggle_tg(int margin_us);
+extern void mdss_mdp_hr_video_dsi_sw_reset(void);
+#endif /* SHDISP_DISABLE_HR_VIDEO */
+#endif /* CONFIG_SHDISP */
+
 #ifdef CONFIG_SHDISP /* CUST_ID_00049 */
 #ifdef SHDISP_DET_DSI_MIPI_ERROR
 static int dsi_err_int_mask0_reg = 0x03f03fc0;
@@ -1490,6 +1498,15 @@ static int mdss_dsi_cmds2buf_tx(struct mdss_dsi_ctrl_pdata *ctrl,
 
 			wait = mdss_dsi_wait4video_eng_busy(ctrl);
 
+#ifdef CONFIG_SHDISP /* CUST_ID_00070 */
+#ifndef SHDISP_DISABLE_HR_VIDEO
+			if (ctrl->panel_mode == DSI_VIDEO_MODE) {
+				mdss_mdp_hr_video_avoid_toggle_tg(0);
+				mdss_mdp_hr_video_dsi_sw_reset();
+			}
+#endif /* SHDISP_DISABLE_HR_VIDEO */
+#endif /* CONFIG_SHDISP */
+
 			mdss_dsi_enable_irq(ctrl, DSI_CMD_TERM);
 			if (use_dma_tpg)
 				len = mdss_dsi_cmd_dma_tpg_tx(ctrl, tp);
@@ -1710,7 +1727,14 @@ do_send:
 		}
 
 		mdss_dsi_wait4video_eng_busy(ctrl);
-
+#ifdef CONFIG_SHDISP /* CUST_ID_00070 */
+#ifndef SHDISP_DISABLE_HR_VIDEO
+		if (ctrl->panel_mode == DSI_VIDEO_MODE) {
+			mdss_mdp_hr_video_avoid_toggle_tg(1000);
+			mdss_mdp_hr_video_dsi_sw_reset();
+		}
+#endif /* SHDISP_DISABLE_HR_VIDEO */
+#endif /* CONFIG_SHDISP */
 		mdss_dsi_enable_irq(ctrl, DSI_CMD_TERM);
 		if (use_dma_tpg)
 			ret = mdss_dsi_cmd_dma_tpg_tx(ctrl, tp);
@@ -1746,6 +1770,14 @@ do_send:
 		}
 
 		mdss_dsi_wait4video_eng_busy(ctrl);	/* video mode only */
+#ifdef CONFIG_SHDISP /* CUST_ID_00070 */
+#ifndef SHDISP_DISABLE_HR_VIDEO
+		if (ctrl->panel_mode == DSI_VIDEO_MODE) {
+			mdss_mdp_hr_video_avoid_toggle_tg(0);
+			mdss_mdp_hr_video_dsi_sw_reset();
+		}
+#endif /* SHDISP_DISABLE_HR_VIDEO */
+#endif /* CONFIG_SHDISP */
 		mdss_dsi_enable_irq(ctrl, DSI_CMD_TERM);
 		/* transmit read comamnd to client */
 		if (use_dma_tpg)
@@ -2139,6 +2171,17 @@ static int mdss_dsi_wait4video_eng_busy(struct mdss_dsi_ctrl_pdata *ctrl)
 
 	if (ctrl->panel_mode == DSI_CMD_MODE)
 		return ret;
+
+#ifdef CONFIG_SHDISP /* CUST_ID_00070 */
+#ifndef SHDISP_DISABLE_HR_VIDEO
+	if (mdss_mdp_hr_video_is_hw_tg_off()) {
+		pr_debug("%s: skip\n", __func__);
+		return ret;
+	} else {
+		pr_debug("%s: wait\n", __func__);
+	}
+#endif /* SHDISP_DISABLE_HR_VIDEO */
+#endif /* CONFIG_SHDISP */
 
 	if (ctrl->ctrl_state & CTRL_STATE_MDP_ACTIVE) {
 		mdss_dsi_wait4video_done(ctrl);
@@ -2852,6 +2895,34 @@ void mdss_dsi_error(struct mdss_dsi_ctrl_pdata *ctrl)
 
 	dsi_send_events(ctrl, DSI_EV_MDP_BUSY_RELEASE, 0);
 }
+
+#ifdef CONFIG_SHDISP /* CUST_ID_00070 */
+#ifndef SHDISP_DISABLE_HR_VIDEO
+void mdss_dsi_video_comp(struct mdss_mdp_ctl *ctl)
+{
+	struct mdss_panel_data *pdata;
+	struct mdss_dsi_ctrl_pdata *ctrl;
+
+	if (!ctl) {
+		pr_err("invalid ctl\n");
+		return;
+	}
+
+	pdata = ctl->panel_data;
+	if (!pdata) {
+		pr_err("invalid pdata\n");
+		return;
+	}
+
+	ctrl = container_of(pdata, struct mdss_dsi_ctrl_pdata, panel_data);
+
+	spin_lock(&ctrl->mdp_lock);
+	mdss_dsi_disable_irq_nosync(ctrl, DSI_VIDEO_TERM);
+	complete(&ctrl->video_comp);
+	spin_unlock(&ctrl->mdp_lock);
+}
+#endif /* SHDISP_DISABLE_HR_VIDEO */
+#endif /* CONFIG_SHDISP */
 
 irqreturn_t mdss_dsi_isr(int irq, void *ptr)
 {

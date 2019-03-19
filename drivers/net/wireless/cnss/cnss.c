@@ -49,14 +49,6 @@
 #include <soc/qcom/memory_dump.h>
 #include <net/cnss.h>
 
-/* [WLAN][SHARP] Customize Start
-                 2015.08.21 register resume function to workqueue to compress
-                 system resuming time. */
-#ifdef SH_WIFI_CUSTOMIZE
-#include <linux/workqueue.h>
-#endif /* SH_WIFI_CUSTOMIZE */
-/* [WLAN][SHARP] Customize End */
-
 #define subsys_to_drv(d) container_of(d, struct cnss_data, subsys_desc)
 
 #define VREG_ON			1
@@ -290,24 +282,7 @@ static struct cnss_data {
 	int wlan_bootstrap_gpio[NUM_OF_BOOTSTRAP];
 	atomic_t auto_suspended;
 	bool monitor_wake_intr;
-
-/* [WLAN][SHARP] Customize Start
-                 2015.08.21 register resume function to workqueue to compress
-                 system resuming time. */
-#ifdef SH_WIFI_CUSTOMIZE
-        struct work_struct work;
-        atomic_t work_is_end;
-#endif /* SH_WIFI_CUSTOMIZE */
-/* [WLAN][SHARP] Customize End */
 } *penv;
-
-/* [WLAN][SHARP] Customize Start
-                 2015.08.21 register resume function to workqueue to compress
-                 system resuming time. */
-#ifdef SH_WIFI_CUSTOMIZE
-static void cnss_resume_work_func(struct work_struct*);
-#endif /* SH_WIFI_CUSTOMIZE */
-/* [WLAN][SHARP] Customize End */
 
 static int cnss_wlan_vreg_on(struct cnss_wlan_vreg_info *vreg_info)
 {
@@ -1377,14 +1352,6 @@ static int cnss_wlan_pci_suspend(struct device *dev)
 	if (!penv)
 		goto out;
 
-/* [WLAN][SHARP] Customize Start
-                 2015.08.21 register resume function to workqueue to compress
-                 system resuming time. */
-#ifdef SH_WIFI_CUSTOMIZE
-        flush_work(&penv->work);
-#endif /* SH_WIFI_CUSTOMIZE */
-/* [WLAN][SHARP] Customize End */
-
 	wdriver = penv->driver;
 	if (!wdriver)
 		goto out;
@@ -1403,66 +1370,10 @@ out:
 	return ret;
 }
 
-/* [WLAN][SHARP] Customize Start
-                 2015.08.21 register resume function to workqueue to compress
-                 system resuming time. */
-#ifdef SH_WIFI_CUSTOMIZE
-static void cnss_resume_work_func(struct work_struct* work)
-{
-        int ret = 0;
-	struct cnss_wlan_driver *wdriver;
-	struct pci_dev *pdev;
-
-        pr_debug("%s: start resume work\n", __func__);
-
-	if (!penv)
-		goto out;
-
-	wdriver = penv->driver;
-	if (!wdriver)
-		goto out;
-
-        /* 2015.09.07 add Null pointer check*/
-        pdev = penv->pdev;
-
-	if (!penv->pcie_link_down_ind) {
-		if (msm_pcie_pm_control(MSM_PCIE_RESUME,
-			cnss_get_pci_dev_bus_number(pdev),
-			pdev, NULL, PM_OPTIONS)) {
-			pr_err("%s: Failed to resume PCIe link\n", __func__);
-			ret = -EAGAIN;
-			goto out;
-		}
-		penv->pcie_link_state = PCIE_LINK_UP;
-	}
-	if (wdriver->resume && !penv->pcie_link_down_ind) {
-		if (penv->saved_state)
-			pci_load_and_free_saved_state(pdev,
-				&penv->saved_state);
-		pci_restore_state(pdev);
-
-		ret = wdriver->resume(pdev);
-	}
-
-out:
-        if (ret != 0) {
-                pr_err("%s: Failed to resume wdriver\n", __func__);
-        }
-
-        atomic_set(&penv->work_is_end, 1);
-        pr_debug("%s: end resume work\n", __func__);
-}
-#endif /* SH_WIFI_CUSTOMIZE */
-/* [WLAN][SHARP] Customize End */
-
 static int cnss_wlan_pci_resume(struct device *dev)
 {
 	int ret = 0;
 
-/* [WLAN][SHARP] Customize Start
-                 2015.08.21 register resume function to workqueue to compress
-                 system resuming time. */
-#ifndef SH_WIFI_CUSTOMIZE
 	struct cnss_wlan_driver *wdriver;
 	struct pci_dev *pdev = to_pci_dev(dev);
 
@@ -1493,14 +1404,6 @@ static int cnss_wlan_pci_resume(struct device *dev)
 	}
 
 out:
-#else
-        /* 2015.09.07 add Null pointer check*/
-        if (penv) {
-                atomic_set(&penv->work_is_end, 0);
-                schedule_work(&penv->work);
-        }
-#endif /* SH_WIFI_CUSTOMIZE */
-/* [WLAN][SHARP] Customize End */
 	return ret;
 }
 
@@ -2564,15 +2467,6 @@ static int cnss_probe(struct platform_device *pdev)
 	if (!penv)
 		return -ENOMEM;
 
-/* [WLAN][SHARP] Customize Start
-                 2015.08.21 register resume function to workqueue to compress
-                 system resuming time. */
-#ifdef SH_WIFI_CUSTOMIZE
-        INIT_WORK(&penv->work, cnss_resume_work_func);
-        atomic_set(&penv->work_is_end,1);
-#endif /* SH_WIFI_CUSTOMIZE */
-/* [WLAN][SHARP] Customize End */
-
 	penv->pldev = pdev;
 	penv->esoc_desc = NULL;
 
@@ -3025,6 +2919,10 @@ int cnss_auto_suspend(void)
 	if (penv->pcie_link_state) {
 		pci_save_state(pdev);
 		penv->saved_state = pci_store_saved_state(pdev);
+		pci_disable_device(pdev);
+		ret = pci_set_power_state(pdev, PCI_D3hot);
+		if (ret)
+			pr_err("%s: Set D3Hot failed: %d\n", __func__, ret);
 		if (msm_pcie_pm_control(MSM_PCIE_SUSPEND,
 			cnss_get_pci_dev_bus_number(pdev),
 			pdev, NULL, PM_OPTIONS)) {
@@ -3060,6 +2958,9 @@ int cnss_auto_resume(void)
 			ret = -EAGAIN;
 			goto out;
 		}
+		ret = pci_enable_device(pdev);
+		if (ret)
+			pr_err("%s: enable device failed: %d\n", __func__, ret);
 		penv->pcie_link_state = PCIE_LINK_UP;
 	}
 
@@ -3068,6 +2969,7 @@ int cnss_auto_resume(void)
 			&penv->saved_state);
 
 	pci_restore_state(pdev);
+	pci_set_master(pdev);
 
 	atomic_set(&penv->auto_suspended, 0);
 out:
@@ -3118,6 +3020,7 @@ void cnss_runtime_init(struct device *dev, int auto_delay)
 	pm_runtime_allow(dev);
 	pm_runtime_mark_last_busy(dev);
 	pm_runtime_put_noidle(dev);
+	pm_suspend_ignore_children(dev, true);
 }
 EXPORT_SYMBOL(cnss_runtime_init);
 
@@ -3127,30 +3030,6 @@ void cnss_runtime_exit(struct device *dev)
 	pm_runtime_set_active(dev);
 }
 EXPORT_SYMBOL(cnss_runtime_exit);
-
-/* [WLAN][SHARP] Customize Start
-                 2015.08.21 register resume function to workqueue to compress
-                 system resuming time. */
-#ifdef SH_WIFI_CUSTOMIZE
-/* function called from wlan_hdd_cfg80211.c
-   to confirm cnss's resume work is end */
-int cnss_is_resumed(void)
-{
-        if(!penv) return 1;
-        return atomic_read(&penv->work_is_end);
-}
-EXPORT_SYMBOL(cnss_is_resumed);
-
-/* function called from wlan_hdd_cfg80211.c
-   to flush cnss's resume work */
-void cnss_flush_resume_work(void)
-{
-        if(!penv) return;
-        flush_work(&penv->work);
-}
-EXPORT_SYMBOL(cnss_flush_resume_work);
-#endif /* SH_WIFI_CUSTOMIZE */
-/* [WLAN][SHARP] Customize End */
 
 module_init(cnss_initialize);
 module_exit(cnss_exit);

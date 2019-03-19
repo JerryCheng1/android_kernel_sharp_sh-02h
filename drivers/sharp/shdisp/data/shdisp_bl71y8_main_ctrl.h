@@ -19,21 +19,7 @@
 /* INCLUDE FILES                                                             */
 /* ------------------------------------------------------------------------- */
 #include "shdisp_bl71y8_cmn.h"
-#if defined(SHDISP_MODEL_FS)
-#include "shdisp_bl71y8_data_fs.h"
-#elif defined(SHDISP_MODEL_MID)
- #if defined(SHDISP_PA)
-#include "shdisp_bl71y8_data_mid_pa.h"
- #elif defined(SHDISP_DL)
-#include "shdisp_bl71y8_data_mid_dl.h"
- #elif defined(SHDISP_AL)
-#include "shdisp_bl71y8_data_mid_al.h"
- #else /* SHDISP_PA */
-#include "shdisp_bl71y8_data_mid.h"
- #endif /* SHDISP_PA */
-#else /* SHDISP_MODEL_FS */
-#include "shdisp_bl71y8_data_default.h"
-#endif /* SHDISP_MODEL_FS */
+#include "shdisp_bl71y8_data.h"
 
 /* ------------------------------------------------------------------------- */
 /* VARIABLES                                                                 */

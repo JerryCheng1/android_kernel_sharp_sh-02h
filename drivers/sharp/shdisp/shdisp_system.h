@@ -42,7 +42,11 @@
 #define SHDISP_GPIO_NUM_PANEL_VDD           (107)
 
 #define SHDISP_GPIO_NUM_MIPI_ERROR          (34)
+#if defined(CONFIG_SHDISP_PANEL_ANDY)
+#define SHDISP_GPIO_NUM_UPPER_UNIT          ("gp-63")
+#else  /* CONFIG_SHDISP_PANEL_ANDY */
 #define SHDISP_GPIO_NUM_UPPER_UNIT          ("gp-69")
+#endif /* CONFIG_SHDISP_PANEL_ANDY */
 #define SHDISP_GPIO_PIN_UPPER_UNIT          ("fd510000.pinctrl")
 
 enum {
@@ -113,6 +117,9 @@ enum {
 /* ------------------------------------------------------------------------- */
 int  shdisp_SYS_API_Host_control(int cmd, unsigned long rate);
 void shdisp_SYS_API_delay_us(unsigned long usec);
+void shdisp_SYS_API_msleep(unsigned int msec);
+void shdisp_SYS_API_usleep(unsigned int usec);
+
 void shdisp_SYS_API_Host_gpio_init(void);
 void shdisp_SYS_API_Host_gpio_exit(void);
 int  shdisp_SYS_API_Host_gpio_request(int num, char *label);
@@ -122,10 +129,10 @@ int  shdisp_SYS_API_get_Host_gpio(int num);
 int  shdisp_SYS_API_check_upper_unit(int gpio_no);
 
 void shdisp_SYS_API_set_irq_port(int irq_port, struct platform_device *pdev);
-int  shdisp_SYS_API_request_irq(irqreturn_t (*irq_handler)( int , void * ) );
+int  shdisp_SYS_API_request_irq(irqreturn_t (*irq_handler)(int , void *));
 void shdisp_SYS_API_free_irq(void);
 void shdisp_SYS_API_set_irq_init(void);
-int  shdisp_SYS_API_set_irq( int enable );
+int  shdisp_SYS_API_set_irq(int enable);
 
 int  shdisp_SYS_API_bdic_i2c_init(void);
 int  shdisp_SYS_API_bdic_i2c_exit(void);

@@ -541,6 +541,12 @@ config SRAM
 	  the genalloc API. It is supposed to be used for small on-chip SRAM
 	  areas found on many SoCs.
 
+config UID_CPUTIME
+	tristate "Per-UID cpu time statistics"
+	depends on PROFILING
+	help
+	  Per UID based cpu time statistics exported to /proc/uid_cputime
+
 config TSIF
 	depends on ARCH_MSM8X60 || ARCH_MSM8960 || ARCH_APQ8064
 	tristate "TSIF (Transport Stream InterFace) support"
@@ -620,6 +626,13 @@ config QCOM_LIQUID_DOCK
 	  the docking station of various models of Qualcomm Technology's
 	  LiQUID Mobile Development Platforms.
 
+#/* SH_AUDIO_DRIVER -> */ /*14-061*/
+config MQ100_SENSOR_HUB
+	boolean "Dummy sensor hub driver for audience chip"
+	help
+		Enables dummy driver for audience chip
+#/* SH_AUDIO_DRIVER <- */ /*14-061*/
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
@@ -630,4 +643,7 @@ source "drivers/misc/altera-stapl/Kconfig"
 source "drivers/misc/mei/Kconfig"
 source "drivers/misc/vmw_vmci/Kconfig"
 source "drivers/misc/qcom/Kconfig"
+#/* SH_AUDIO_DRIVER -> */ /*14-061*/
+source "drivers/misc/sensorhub/Kconfig"
+#/* SH_AUDIO_DRIVER <- */ /*14-061*/
 endmenu

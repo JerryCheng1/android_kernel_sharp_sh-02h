@@ -85,6 +85,12 @@ static void shub_set_abs_params(void);
 #endif // SHMDS_HUB_0601_01 del E
 static int32_t currentActive;
 
+/* SHMDS_HUB_0321_01 add S */
+static int32_t input_mag[INDEX_SUM]= {0};
+static int32_t input_flg = 0;
+static int32_t xyz_mag_uc[9]= {0};
+/* SHMDS_HUB_0321_01 add E */
+
 static struct hrtimer poll_timer;
 extern int32_t setMaxBatchReportLatency(uint32_t sensor, int64_t latency);
 
@@ -386,7 +392,6 @@ static void shub_sensor_poll_work_func(struct work_struct *work)
 //        shub_get_sensors_data(SHUB_ACTIVE_SENSOR, xyz);
         if((shub_get_sensor_activate_info(SHUB_SAME_NOTIFY_MAG) == MAG_GROUP_MASK) && (shub_get_sensor_same_delay_flg(SHUB_SAME_NOTIFY_MAG) == 1)){
             if(shub_get_sensor_first_measure_info(SHUB_SAME_NOTIFY_MAG) & SHUB_ACTIVE_SENSOR) {
-                int32_t xyz_mag_uc[9]= {0};
                 struct timespec tmp_ts;
 /* SHMDS_HUB_0311_02 mod S */
                 int64_t local_ts_ns;
@@ -400,27 +405,40 @@ static void shub_sensor_poll_work_func(struct work_struct *work)
                     xyz_mag_uc[8] = tmp_ts.tv_nsec;
                 }
                 else {
+                    input_flg = 0; /* SHMDS_HUB_0321_01 add */
                     shub_work_busy_flg = false;
                     shub_qos_end();      // SHMDS_HUB_1101_01 add
                     mutex_unlock(&shub_lock);
                     return ;
                 }
-                xyz[0] = xyz_mag_uc[0] - xyz_mag_uc[3];
-                xyz[1] = xyz_mag_uc[1] - xyz_mag_uc[4];
-                xyz[2] = xyz_mag_uc[2] - xyz_mag_uc[5];
-                xyz[3] = xyz_mag_uc[6];
-                xyz[4] = xyz_mag_uc[7];
-                xyz[5] = xyz_mag_uc[8];
-                shub_input_report_mag(xyz);
-                shub_input_report_mag_uncal(xyz_mag_uc);
+/* SHMDS_HUB_0321_01 add S */
+                input_mag[0] = xyz_mag_uc[0] - xyz_mag_uc[3];
+                input_mag[1] = xyz_mag_uc[1] - xyz_mag_uc[4];
+                input_mag[2] = xyz_mag_uc[2] - xyz_mag_uc[5];
+                input_mag[3] = xyz_mag_uc[6];
+                //xyz[4] = xyz_mag_uc[7];
+                //xyz[5] = xyz_mag_uc[8];
+                //shub_input_report_mag(xyz);
+                //shub_input_report_mag_uncal(xyz_mag_uc);
+                input_flg = 2;
                 shub_local_ts_ns_old = local_ts_ns;		/* SHMDS_HUB_0311_02 add */
+            }else{
+                input_flg = 0;
             }
+/* SHMDS_HUB_0321_01 add E */
         }
         else {
             shub_get_sensors_data(SHUB_ACTIVE_SENSOR, xyz);
             shub_normal_last_ts.tv_sec = xyz[4];
             shub_normal_last_ts.tv_nsec = xyz[5];
-            shub_input_report_mag(xyz);
+/* SHMDS_HUB_0321_01 add S */
+            input_mag[0] = xyz[0];
+            input_mag[1] = xyz[1];
+            input_mag[2] = xyz[2];
+            input_mag[3] = xyz[3];
+            //shub_input_report_mag(xyz);
+            input_flg = 1;
+/* SHMDS_HUB_0321_01 add E */
             shub_local_ts_ns_old = 0;		/* SHMDS_HUB_0311_02 add */
         }
 /* SHMDS_HUB_0311_01 mod E */
@@ -442,6 +460,22 @@ static enum hrtimer_restart shub_sensor_poll(struct hrtimer *tm)
         shub_work_busy_flg = true;
     }
     shub_local_ts = shub_get_timestamp();
+/* SHMDS_HUB_0321_01 add S */
+    if(input_flg == 1){
+        input_mag[4] = shub_local_ts.tv_sec;
+        input_mag[5] = shub_local_ts.tv_nsec;
+        shub_input_report_mag(input_mag);
+    }else if(input_flg == 2) {
+        input_mag[4] = shub_local_ts.tv_sec;
+        input_mag[5] = shub_local_ts.tv_nsec;
+        xyz_mag_uc[7] = shub_local_ts.tv_sec;
+        xyz_mag_uc[8] = shub_local_ts.tv_nsec;
+        shub_input_report_mag(input_mag);
+        shub_input_report_mag_uncal(xyz_mag_uc);
+    }else{
+        DBG_MAG_DATA("not report\n");
+    }
+/* SHMDS_HUB_0321_01 add E */
     /* SHMDS_HUB_0311_01 add E */
     schedule_work(&sensor_poll_work);
     hrtimer_forward_now(&poll_timer, ns_to_ktime((int64_t)delay * NSEC_PER_MSEC));
@@ -510,6 +544,7 @@ static void shub_set_sensor_poll(int32_t en)
 {
     hrtimer_cancel(&poll_timer);
     if(en){
+        input_flg = 0; /* SHMDS_HUB_0321_01 add */
         hrtimer_start(&poll_timer, ns_to_ktime((int64_t)delay * NSEC_PER_MSEC), HRTIMER_MODE_REL);
     }
 }

@@ -79,6 +79,9 @@ static int32_t        delay           = 200;//200ms
 static IoCtlBatchInfo batch_param     = { 0, 0, 0 };
 static struct work_struct sensor_poll_work;
 
+static int32_t input_rot_gyro[INDEX_SUM]= {0}; /* SHMDS_HUB_0321_01 add */
+static bool input_flg = false; /* SHMDS_HUB_0321_01 add */
+
 static void shub_sensor_poll_work_func(struct work_struct *work);
 static void shub_set_sensor_poll(int32_t en);
 #if 0  // SHMDS_HUB_0601_01 del S
@@ -301,6 +304,16 @@ static long shub_ioctl_wrapper(struct file *filp, unsigned int cmd, unsigned lon
     return ret;
 }
 // SHMDS_HUB_1101_01 add E
+/* SHMDS_HUB_0321_01 add S */
+static struct timespec shub_local_ts;
+static struct timespec shub_get_timestamp(void)
+{
+    struct timespec ts;
+    ktime_get_ts(&ts);
+    monotonic_to_bootbased(&ts);
+    return ts;
+}
+/* SHMDS_HUB_0321_01 add E */
 
 static void shub_sensor_poll_work_func(struct work_struct *work)
 {
@@ -309,7 +322,14 @@ static void shub_sensor_poll_work_func(struct work_struct *work)
         mutex_lock(&shub_lock);
         shub_qos_start();    // SHMDS_HUB_1101_01 add
         shub_get_sensors_data(SHUB_ACTIVE_SENSOR, xyz);
-        shub_input_report_rot_gyro(xyz);
+/* SHMDS_HUB_0321_01 add S */
+        input_rot_gyro[0] = xyz[0];
+        input_rot_gyro[1] = xyz[1];
+        input_rot_gyro[2] = xyz[2];
+        input_rot_gyro[3] = xyz[3];
+//        shub_input_report_rot_gyro(xyz);
+        input_flg = true;
+/* SHMDS_HUB_0321_01 add E */
         shub_qos_end();      // SHMDS_HUB_1101_01 add
         mutex_unlock(&shub_lock);
     }
@@ -318,6 +338,16 @@ static void shub_sensor_poll_work_func(struct work_struct *work)
 static enum hrtimer_restart shub_sensor_poll(struct hrtimer *tm)
 {
     schedule_work(&sensor_poll_work);
+/* SHMDS_HUB_0321_01 add S */
+    shub_local_ts = shub_get_timestamp();
+    if(input_flg){
+        input_rot_gyro[4] = shub_local_ts.tv_sec;
+        input_rot_gyro[5] = shub_local_ts.tv_nsec;
+        shub_input_report_rot_gyro(input_rot_gyro);
+    }else{
+        DBG_GAMEROT_DATA("not report\n");
+    }
+/* SHMDS_HUB_0321_01 add E */
     hrtimer_forward_now(&poll_timer, ns_to_ktime((int64_t)delay * NSEC_PER_MSEC));
     return HRTIMER_RESTART;
 }
@@ -393,6 +423,7 @@ static void shub_set_sensor_poll(int32_t en)
 {
     hrtimer_cancel(&poll_timer);
     if(en){
+        input_flg = false; /* SHMDS_HUB_0321_01 add */
         hrtimer_start(&poll_timer, ns_to_ktime((int64_t)delay * NSEC_PER_MSEC), HRTIMER_MODE_REL);
     }
 }

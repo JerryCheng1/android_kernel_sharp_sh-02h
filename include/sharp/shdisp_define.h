@@ -20,7 +20,6 @@
 /* MACROS                                                                    */
 /* ------------------------------------------------------------------------- */
 /* ------------------------------------------------------------------------- */
-#define SHDISP_TRV_NM2
 #define SHDISP_LOWBKL
 
 #define SHDISP_SYSFS_LED
@@ -29,6 +28,7 @@
 #define SHDISP_COLOR_LED_TWIN
 #define SHDISP_DL
 #define SHDISP_MODEL_FS
+#define SHDISP_BDIC_PROHIBIT
 
 #define SHDISP_ALS_INT
 #define SHDISP_LED_INT
@@ -47,6 +47,7 @@
 #define SHDISP_COLOR_LED_TWIN
 #define SHDISP_DL
 #define SHDISP_MODEL_MID
+#define SHDISP_BDIC_PROHIBIT
 
 #define SHDISP_ALS_INT
 #define SHDISP_LED_INT
@@ -99,8 +100,28 @@
 #define SHDISP_MAIN_WIDTH  1080
 #define SHDISP_MAIN_HEIGHT 1920
 /* ------------------------------------------------------------------------- */
-#else  /* defined(CONFIG_ARCH_XXX) */
-#define SHDISP_NOT_SUPPORT_DET
+#elif defined(CONFIG_SHDISP_PANEL_ANDY) || defined(FEATURE_SHDISP_PANEL_ANDY)
+#if defined(CONFIG_ARCH_LYNX_DL70) || defined(FEATURE_SH_MODEL_DL70)
+#define SHDISP_COLOR_LED_TWIN
+#define SHDISP_DL
+#elif defined(CONFIG_ARCH_DECKARD_AL20) || defined(FEATURE_SH_MODEL_AL20)
+#define SHDISP_AL
+#endif /* CONFIG_ARCH_LYNX_DL70 || FEATURE_SH_MODEL_DL70 */
+
+#define SHDISP_ALS_INT
+#define SHDISP_LED_INT
+#define SHDISP_ANIME_COLOR_LED
+#if defined(CONFIG_ARCH_LYNX_DL70) || defined(FEATURE_SH_MODEL_DL70)
+#define SHDISP_ILLUMI_COLOR_LED
+#endif /* CONFIG_ARCH_LYNX_DL70 || FEATURE_SH_MODEL_DL70 */
+
+#define USER_CONFIG_SHDISP_PANEL_ANDY
+#define USER_CONFIG_SHDISP_USE_FALCON
+#define SHDISP_DISPLAY_INFO
+#define SHDISP_MAIN_WIDTH  1080
+#define SHDISP_MAIN_HEIGHT 1920
+/* ------------------------------------------------------------------------- */
+#else /* CONFIG_ARCH_XXX || FEATURE_SH_MODEL_XXX */
 #define SHDISP_COLOR_LED_TWIN
 #define SHDISP_DL
 #define SHDISP_MODEL_FS
@@ -110,12 +131,15 @@
 #define SHDISP_ANIME_COLOR_LED
 #define SHDISP_ILLUMI_COLOR_LED
 
-#define USER_CONFIG_SHDISP_PANEL_ANDY
+#define USER_CONFIG_SHDISP_PANEL_HAYABUSA
 #define SHDISP_MAIN_WIDTH  1080
 #define SHDISP_MAIN_HEIGHT 1920
 /* ------------------------------------------------------------------------- */
-#endif  /* defined(CONFIG_ARCH_XXX) */
+#endif /* CONFIG_ARCH_XXX || FEATURE_SH_MODEL_XXX */
 
+#if defined(USER_CONFIG_SHDISP_PANEL_HAYABUSA) || defined(CONFIG_SHDISP_PANEL_HAYABUSA)
+#define SHDISP_TRV_NM2
+#endif  /* defined(USER_CONFIG_SHDISP_PANEL_HAYABUSA) || defined(CONFIG_SHDISP_PANEL_HAYABUSA) */
 
 #ifdef USER_CONFIG_SHDISP_PANEL_HAYABUSA
 #define SHDISP_FPS_HIGH_ENABLE

@@ -170,6 +170,7 @@ obj-$(CONFIG_IIO)		+= iio/
 obj-$(CONFIG_VME_BUS)		+= vme/
 obj-$(CONFIG_IPACK_BUS)		+= ipack/
 obj-$(CONFIG_NTB)		+= ntb/
+obj-$(CONFIG_ANDROID)		+= android/
 
 #MobiCore
 obj-$(CONFIG_MOBICORE_SUPPORT)  += gud/
@@ -179,7 +180,7 @@ obj-$(CONFIG_ESOC)		+= esoc/
 
 obj-$(CONFIG_BIF)		+= bif/
 obj-$(CONFIG_TOUCHSCREEN_SHTPS) += sharp/shtps/
-obj-$(CONFIG_SHUB)		+= sharp/shsensor_hub/ml630q790/
+obj-$(CONFIG_SHUB)		+= sharp/shsensor_hub/
 obj-$(CONFIG_SENSOR_SHGRIP)	+= sharp/shgrip/
 obj-$(CONFIG_SENSORS)		+= sensors/
 obj-$(CONFIG_SENSORS_SSC)	+= sensors/
@@ -188,6 +189,8 @@ obj-$(CONFIG_SHVOLD_KILLPROCESS) += sharp/vold/
 obj-$(CONFIG_DTV_TUNERDEV_TMM)	+= sharp/tunerdrv_tmm/
 obj-$(CONFIG_DTV_TUNERDEV)		+= sharp/tunerdrv/
 obj-$(CONFIG_TOSHIBA_NFC)		+= sharp/nfc/
+obj-$(CONFIG_SHNFC3)		+= sharp/nfc_sec/
 obj-$(CONFIG_SENSORS_FINGERPRINT)	+= sharp/shfpsensor/
 obj-$(CONFIG_SH_FLIP_SWITCH) += sharp/shflip/
 obj-$(CONFIG_SHCAMERA_PICT)     += sharp/shcamled/
+obj-$(CONFIG_SHIRDA) += sharp/shirda/

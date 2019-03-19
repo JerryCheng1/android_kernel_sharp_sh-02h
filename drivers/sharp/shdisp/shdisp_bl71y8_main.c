@@ -69,17 +69,17 @@
 /* ------------------------------------------------------------------------- */
 /* PROTOTYPES                                                                */
 /* ------------------------------------------------------------------------- */
-static int  shdisp_bdic_LD_version_check(unsigned char version);
-static int  shdisp_bdic_LD_hw_init(void);
-static int  shdisp_bdic_PD_set_active(void);
-static int  shdisp_bdic_PD_set_standby(void);
+static int shdisp_bdic_LD_version_check(unsigned char version);
+static int shdisp_bdic_LD_hw_init(void);
+static int shdisp_bdic_PD_set_active(void);
+static int shdisp_bdic_PD_set_standby(void);
 
 static void shdisp_bdic_PD_hw_reset(void);
 static int shdisp_bdic_PD_shutdown(void);
 static int shdisp_bdic_PD_set_init(int *bdic_chipver);
 static int shdisp_bdic_chk_access(void);
 static int shdisp_bdic_get_chipver(int *bdic_chipver);
-static int  shdisp_bdic_seq_regset(const shdisp_bdicRegSetting_t *regtable, int size);
+static int shdisp_bdic_seq_regset(const shdisp_bdicRegSetting_t *regtable, int size);
 static void shdisp_bdic_set_default_sensor_param(struct shdisp_photo_sensor_adj *tmp_adj);
 
 static int shdisp_bdic_IO_write_reg(unsigned char reg, unsigned char val);
@@ -97,7 +97,7 @@ static int shdisp_bdic_IO_psals_read_reg(unsigned char reg, unsigned char *val);
 static int shdisp_bdic_IO_psals_burst_write_reg(unsigned char *wval, unsigned char dataNum);
 static int shdisp_bdic_IO_psals_burst_read_reg(unsigned char reg, unsigned char *rval, unsigned char dataNum);
 
-static int  shdisp_bdic_PD_slave_transfer(struct shdisp_bdic_i2c_msg *msg);
+static int shdisp_bdic_PD_slave_transfer(struct shdisp_bdic_i2c_msg *msg);
 #endif /* defined(USE_LINUX) || defined(SHDISP_APPSBL) */
 
 static int shdisp_bdic_register_driver(void);
@@ -133,8 +133,7 @@ int shdisp_bdic_API_boot_init(int *chipver)
     } else {
         goto exist_err;
     }
-    if (chipver != NULL)
-    {
+    if (chipver != NULL) {
         *chipver = ver;
     }
     SHDISP_TRACE("out")
@@ -164,9 +163,9 @@ int shdisp_bdic_API_shutdown(void)
     SHDISP_TRACE("in");
 
     shdisp_bdic_IO_write_reg(BDIC_REG_SYSTEM1, 0x00);
-    usleep(100);
+    shdisp_SYS_API_usleep(100);
     shdisp_bdic_PD_shutdown();
-    usleep(100);
+    shdisp_SYS_API_usleep(100);
 
     SHDISP_TRACE("out");
     return SHDISP_RESULT_SUCCESS;
@@ -180,7 +179,7 @@ int shdisp_bdic_API_set_active(void)
     int ret;
 
     SHDISP_TRACE("in");
-    ret =  shdisp_bdic_PD_set_active();
+    ret = shdisp_bdic_PD_set_active();
     SHDISP_TRACE("out");
 
     return ret;
@@ -199,6 +198,33 @@ int shdisp_bdic_API_set_standby(void)
 
     return ret;
 }
+
+#ifdef SHDISP_BDIC_PROHIBIT
+/* ------------------------------------------------------------------------- */
+/* shdisp_bdic_API_correct_proh_val                                          */
+/* ------------------------------------------------------------------------- */
+unsigned char shdisp_bdic_API_correct_proh_val(unsigned char value)
+{
+    static struct shdisp_bdic_prohibit_value {
+        unsigned char prohibit;
+        unsigned char correct;
+    } const shdisp_bdic_prohibit_tbl[] = {
+        { 0x68, 0x67 },
+        { 0x69, 0x6A },
+    };
+
+    unsigned int cnt = 0;
+    for (; cnt < ARRAY_SIZE(shdisp_bdic_prohibit_tbl); cnt++) {
+        if (shdisp_bdic_prohibit_tbl[cnt].prohibit == value) {
+            SHDISP_DEBUG(": change to %X from %X", 
+                shdisp_bdic_prohibit_tbl[cnt].correct, value);
+            value = shdisp_bdic_prohibit_tbl[cnt].correct;
+            break;
+        }
+    }
+    return value;
+}
+#endif /* SHDISP_BDIC_PROHIBIT */
 
 /* ------------------------------------------------------------------------- */
 /* shdisp_bdic_API_als_sensor_adjust                                         */
@@ -1088,7 +1114,7 @@ static int shdisp_bdic_probe(struct platform_device *pdev)
     struct resource *res;
     int rc = SHDISP_RESULT_SUCCESS;
 
-    SHDISP_TRACE("in pdev = 0x%p", pdev );
+    SHDISP_TRACE("in pdev = 0x%p", pdev);
 
     if (pdev) {
         res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
@@ -1113,7 +1139,7 @@ static int shdisp_bdic_probe(struct platform_device *pdev)
         SHDISP_ERR("pdev is NULL");
     }
 probe_done:
-    SHDISP_TRACE("out rc = %d", rc );
+    SHDISP_TRACE("out rc = %d", rc);
 
     return rc;
 #else   /* CONFIG_OF */

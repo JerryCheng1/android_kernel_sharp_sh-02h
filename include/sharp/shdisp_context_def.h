@@ -311,7 +311,12 @@ struct shdisp_psals_status {
 struct shdisp_freq_params {
 #if defined(CONFIG_SHDISP_PANEL_HAYABUSA) || defined(USER_CONFIG_SHDISP_PANEL_HAYABUSA)
     int internal_osc;
-#endif /* defined(CONFIG_SHDISP_PANEL_HAYABUSA) || defined(USER_CONFIG_SHDISP_PANEL_HAYABUSA) */
+#elif defined(CONFIG_SHDISP_PANEL_ANDY) || defined(USER_CONFIG_SHDISP_PANEL_ANDY)
+    unsigned char rtn;
+    unsigned char gip;
+    unsigned char vbp;
+    unsigned char vfp;
+#endif /* defined(CONFIG_SHDISP_PANEL_XXX) || defined(USER_CONFIG_SHDISP_PANEL_XXX) */
 };
 
 struct shdisp_lcddr_phy_gmm_reg {

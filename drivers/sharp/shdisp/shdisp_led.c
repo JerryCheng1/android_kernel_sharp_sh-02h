@@ -83,8 +83,8 @@
 /* PROTOTYPES                                                                */
 /* ------------------------------------------------------------------------- */
 static void shdisp_led_status_init(void);
-static int  shdisp_bdic_seq_led_off(void);
-static int  shdisp_bdic_seq_led_normal_on(unsigned char color);
+static int shdisp_bdic_seq_led_off(void);
+static int shdisp_bdic_seq_led_normal_on(unsigned char color);
 #ifdef SHDISP_SYSFS_LED
 static int shdisp_bdic_seq_led_on(int no, struct shdisp_tri_led led);
 static int shdisp_bdic_seq_leds_off(int no);
@@ -113,8 +113,8 @@ static void shdisp_bdic_seq_illumi_triple_color(unsigned char first_color);
 #endif /* SHDISP_ILLUMI_TRIPLE_COLOR_LED && SHDISP_ANIME_COLOR_LED */
 
 #ifdef SHDISP_TRI_LED2
-static int  shdisp_bdic_seq_led_off2(void);
-static int  shdisp_bdic_seq_led_normal_on2(unsigned char color);
+static int shdisp_bdic_seq_led_off2(void);
+static int shdisp_bdic_seq_led_normal_on2(unsigned char color);
 static void shdisp_bdic_seq_led_blink_on2(unsigned char color, int ontime, int interval, int count);
 static void shdisp_bdic_seq_led_firefly_on2(unsigned char color, int ontime, int interval, int count);
 #ifdef SHDISP_ANIME_COLOR_LED
@@ -148,7 +148,7 @@ static void shdisp_bdic_LD_set_led_fix_current_table_twin(unsigned char *rgb_cur
 
 static void shdisp_bdic_seq_bdic_active_for_led(int);
 static void shdisp_bdic_seq_bdic_standby_for_led(int);
-static unsigned char shdisp_bdic_get_color_index_and_reedit(struct shdisp_tri_led *tri_led );
+static unsigned char shdisp_bdic_get_color_index_and_reedit(struct shdisp_tri_led *tri_led);
 static void shdisp_bdic_PD_TRI_LED_control(unsigned char request, int param);
 static void shdisp_bdic_PD_TRI_LED_set_anime(void);
 static void shdisp_bdic_PD_TRI_LED_set_chdig(void);
@@ -294,7 +294,7 @@ int shdisp_bdic_API_TRI_LED_off2(void)
 /* ------------------------------------------------------------------------- */
 /* shdisp_bdic_API_TRI_LED_get_color_index_and_reedit                        */
 /* ------------------------------------------------------------------------- */
-unsigned char shdisp_bdic_API_TRI_LED_get_color_index_and_reedit(struct shdisp_tri_led *tri_led )
+unsigned char shdisp_bdic_API_TRI_LED_get_color_index_and_reedit(struct shdisp_tri_led *tri_led)
 {
     unsigned char color=0;
 
@@ -360,7 +360,6 @@ void shdisp_bdic_API_TRI_LED_firefly_on(unsigned char color, int ontime, int int
 /* ------------------------------------------------------------------------- */
 /* shdisp_bdic_API_TRI_LED_high_speed_on                                     */
 /* ------------------------------------------------------------------------- */
-
 void shdisp_bdic_API_TRI_LED_high_speed_on(unsigned char color, int interval, int count)
 {
     shdisp_bdic_seq_led_high_speed_on(color, SHDISP_BDIC_TRI_LED_INTERVAL_HISPEED, count);
@@ -370,7 +369,6 @@ void shdisp_bdic_API_TRI_LED_high_speed_on(unsigned char color, int interval, in
 /* ------------------------------------------------------------------------- */
 /* shdisp_bdic_API_TRI_LED_standard_on                                       */
 /* ------------------------------------------------------------------------- */
-
 void shdisp_bdic_API_TRI_LED_standard_on(unsigned char color, int interval, int count)
 {
     shdisp_bdic_seq_led_standard_on(color, SHDISP_BDIC_TRI_LED_INTERVAL_STANDARD, count);
@@ -380,7 +378,6 @@ void shdisp_bdic_API_TRI_LED_standard_on(unsigned char color, int interval, int 
 /* ------------------------------------------------------------------------- */
 /* shdisp_bdic_API_TRI_LED_breath_on                                         */
 /* ------------------------------------------------------------------------- */
-
 void shdisp_bdic_API_TRI_LED_breath_on(unsigned char color, int interval, int count)
 {
     shdisp_bdic_seq_led_breath_on(color, SHDISP_BDIC_TRI_LED_INTERVAL_BREATH, count);
@@ -390,7 +387,6 @@ void shdisp_bdic_API_TRI_LED_breath_on(unsigned char color, int interval, int co
 /* ------------------------------------------------------------------------- */
 /* shdisp_bdic_API_TRI_LED_long_breath_on                                    */
 /* ------------------------------------------------------------------------- */
-
 void shdisp_bdic_API_TRI_LED_long_breath_on(unsigned char color, int interval, int count)
 {
     shdisp_bdic_seq_led_long_breath_on(color, SHDISP_BDIC_TRI_LED_INTERVAL_LONG_BREATH, count);
@@ -400,7 +396,6 @@ void shdisp_bdic_API_TRI_LED_long_breath_on(unsigned char color, int interval, i
 /* ------------------------------------------------------------------------- */
 /* shdisp_bdic_API_TRI_LED_wave_on                                           */
 /* ------------------------------------------------------------------------- */
-
 void shdisp_bdic_API_TRI_LED_wave_on(unsigned char color, int interval, int count)
 {
     shdisp_bdic_seq_led_wave_on(color, SHDISP_BDIC_TRI_LED_INTERVAL_WAVE, count);
@@ -410,7 +405,6 @@ void shdisp_bdic_API_TRI_LED_wave_on(unsigned char color, int interval, int coun
 /* ------------------------------------------------------------------------- */
 /* shdisp_bdic_API_TRI_LED_flash_on                                          */
 /* ------------------------------------------------------------------------- */
-
 void shdisp_bdic_API_TRI_LED_flash_on(unsigned char color, int interval, int count)
 {
     shdisp_bdic_seq_led_flash_on(color, SHDISP_BDIC_TRI_LED_INTERVAL_FLASH, count);
@@ -420,7 +414,6 @@ void shdisp_bdic_API_TRI_LED_flash_on(unsigned char color, int interval, int cou
 /* ------------------------------------------------------------------------- */
 /* shdisp_bdic_API_TRI_LED_aurora_on                                         */
 /* ------------------------------------------------------------------------- */
-
 void shdisp_bdic_API_TRI_LED_aurora_on(int interval, int count)
 {
     shdisp_bdic_seq_led_aurora_on(SHDISP_BDIC_TRI_LED_INTERVAL_AURORA, count);
@@ -430,7 +423,6 @@ void shdisp_bdic_API_TRI_LED_aurora_on(int interval, int count)
 /* ------------------------------------------------------------------------- */
 /* shdisp_bdic_API_TRI_LED_rainbow_on                                        */
 /* ------------------------------------------------------------------------- */
-
 void shdisp_bdic_API_TRI_LED_rainbow_on(int interval, int count)
 {
     shdisp_bdic_seq_led_rainbow_on(SHDISP_BDIC_TRI_LED_INTERVAL_RAINBOW, count);
@@ -509,7 +501,6 @@ void shdisp_bdic_API_TRI_LED_firefly_on2(unsigned char color, int ontime, int in
 /* ------------------------------------------------------------------------- */
 /* shdisp_bdic_API_TRI_LED_high_speed_on2                                    */
 /* ------------------------------------------------------------------------- */
-
 void shdisp_bdic_API_TRI_LED_high_speed_on2(unsigned char color, int interval, int count)
 {
     shdisp_bdic_seq_led_high_speed_on2(color, SHDISP_BDIC_TRI_LED_INTERVAL_HISPEED, count);
@@ -517,7 +508,7 @@ void shdisp_bdic_API_TRI_LED_high_speed_on2(unsigned char color, int interval, i
 }
 
 /* ------------------------------------------------------------------------- */
-/* shdisp_bdic_API_TRI_LED_standard_on2                                       */
+/* shdisp_bdic_API_TRI_LED_standard_on2                                      */
 /* ------------------------------------------------------------------------- */
 
 void shdisp_bdic_API_TRI_LED_standard_on2(unsigned char color, int interval, int count)
@@ -529,7 +520,6 @@ void shdisp_bdic_API_TRI_LED_standard_on2(unsigned char color, int interval, int
 /* ------------------------------------------------------------------------- */
 /* shdisp_bdic_API_TRI_LED_breath_on2                                        */
 /* ------------------------------------------------------------------------- */
-
 void shdisp_bdic_API_TRI_LED_breath_on2(unsigned char color, int interval, int count)
 {
     shdisp_bdic_seq_led_breath_on2(color, SHDISP_BDIC_TRI_LED_INTERVAL_BREATH, count);
@@ -539,7 +529,6 @@ void shdisp_bdic_API_TRI_LED_breath_on2(unsigned char color, int interval, int c
 /* ------------------------------------------------------------------------- */
 /* shdisp_bdic_API_TRI_LED_long_breath_on2                                   */
 /* ------------------------------------------------------------------------- */
-
 void shdisp_bdic_API_TRI_LED_long_breath_on2(unsigned char color, int interval, int count)
 {
     shdisp_bdic_seq_led_long_breath_on2(color, SHDISP_BDIC_TRI_LED_INTERVAL_LONG_BREATH, count);
@@ -549,7 +538,6 @@ void shdisp_bdic_API_TRI_LED_long_breath_on2(unsigned char color, int interval, 
 /* ------------------------------------------------------------------------- */
 /* shdisp_bdic_API_TRI_LED_wave_on2                                          */
 /* ------------------------------------------------------------------------- */
-
 void shdisp_bdic_API_TRI_LED_wave_on2(unsigned char color, int interval, int count)
 {
     shdisp_bdic_seq_led_wave_on2(color, SHDISP_BDIC_TRI_LED_INTERVAL_WAVE, count);
@@ -559,7 +547,6 @@ void shdisp_bdic_API_TRI_LED_wave_on2(unsigned char color, int interval, int cou
 /* ------------------------------------------------------------------------- */
 /* shdisp_bdic_API_TRI_LED_flash_on2                                         */
 /* ------------------------------------------------------------------------- */
-
 void shdisp_bdic_API_TRI_LED_flash_on2(unsigned char color, int interval, int count)
 {
     shdisp_bdic_seq_led_flash_on2(color, SHDISP_BDIC_TRI_LED_INTERVAL_FLASH, count);
@@ -569,7 +556,6 @@ void shdisp_bdic_API_TRI_LED_flash_on2(unsigned char color, int interval, int co
 /* ------------------------------------------------------------------------- */
 /* shdisp_bdic_API_TRI_LED_aurora_on2                                        */
 /* ------------------------------------------------------------------------- */
-
 void shdisp_bdic_API_TRI_LED_aurora_on2(int interval, int count)
 {
     shdisp_bdic_seq_led_aurora_on2(SHDISP_BDIC_TRI_LED_INTERVAL_AURORA, count);
@@ -579,7 +565,6 @@ void shdisp_bdic_API_TRI_LED_aurora_on2(int interval, int count)
 /* ------------------------------------------------------------------------- */
 /* shdisp_bdic_API_TRI_LED_rainbow_on2                                       */
 /* ------------------------------------------------------------------------- */
-
 void shdisp_bdic_API_TRI_LED_rainbow_on2(int interval, int count)
 {
     shdisp_bdic_seq_led_rainbow_on2(SHDISP_BDIC_TRI_LED_INTERVAL_RAINBOW, count);
@@ -796,14 +781,26 @@ static int shdisp_bdic_seq_led_on(int no, struct shdisp_tri_led led)
     SHDISP_DEBUG("is_led_current_mode:%d", is_led_current_mode);
 
     if (no == SYSFS_LED_SH_LED_1) {
+#ifdef SHDISP_BDIC_PROHIBIT
+        rgb_current1[0] = shdisp_bdic_API_correct_proh_val(led.red);
+        rgb_current1[1] = shdisp_bdic_API_correct_proh_val(led.green);
+        rgb_current1[2] = shdisp_bdic_API_correct_proh_val(led.blue);
+#else /* SHDISP_BDIC_PROHIBIT */
         rgb_current1[0] = led.red;
         rgb_current1[1] = led.green;
         rgb_current1[2] = led.blue;
+#endif /* SHDISP_BDIC_PROHIBIT */
 #ifdef SHDISP_COLOR_LED_TWIN
     } else {
+#ifdef SHDISP_BDIC_PROHIBIT
+        rgb_current2[0] = shdisp_bdic_API_correct_proh_val(led.red);
+        rgb_current2[1] = shdisp_bdic_API_correct_proh_val(led.green);
+        rgb_current2[2] = shdisp_bdic_API_correct_proh_val(led.blue);
+#else /* SHDISP_BDIC_PROHIBIT */
         rgb_current2[0] = led.red;
         rgb_current2[1] = led.green;
         rgb_current2[2] = led.blue;
+#endif /* SHDISP_BDIC_PROHIBIT */
 #endif /* SHDISP_COLOR_LED_TWIN */
     }
 
@@ -1169,7 +1166,7 @@ static void shdisp_bdic_seq_led_aurora_on(int interval, int count)
 }
 
 /* ------------------------------------------------------------------------- */
-/* shdisp_bdic_seq_led_rainbow_on                                         */
+/* shdisp_bdic_seq_led_rainbow_on                                            */
 /* ------------------------------------------------------------------------- */
 static void shdisp_bdic_seq_led_rainbow_on(int interval, int count)
 {
@@ -1278,8 +1275,8 @@ static void shdisp_bdic_seq_illumi_triple_color_on(struct shdisp_illumi_triple_c
         queue_delayed_work(illumi_state.workqueue, &illumi_state.works[i], usecs_to_jiffies(shdisp_illumi_delayed_times[i]));
         SHDISP_DEBUG("delay_works[%d] was queued", i);
     }
-    
-    msleep(10);
+
+    shdisp_SYS_API_msleep(10);
     shdisp_bdic_illumi_color_set_a2();
     SHDISP_TRACE("out");
 }
@@ -1558,7 +1555,7 @@ static void shdisp_bdic_seq_led_emopattern_on2(int interval, int count)
 /* ------------------------------------------------------------------------- */
 /* shdisp_bdic_write_illumi_triple_color_top                                 */
 /* ------------------------------------------------------------------------- */
-static void shdisp_bdic_write_illumi_triple_color_top(char reg, int color_index) 
+static void shdisp_bdic_write_illumi_triple_color_top(char reg, int color_index)
 {
     char color_rgb[3];
     unsigned char extend_color_index;
@@ -1569,7 +1566,7 @@ static void shdisp_bdic_write_illumi_triple_color_top(char reg, int color_index)
 #endif
 
 #ifdef SHDISP_COLOR_LED_TWIN
-    switch(reg) {
+    switch (reg) {
     case BDIC_REG_CH0_A:
        reg_twin = BDIC_REG_CH3_A;
        break;
@@ -1613,7 +1610,7 @@ static void shdisp_bdic_write_illumi_triple_color_top(char reg, int color_index)
     color_rgb_twin[2] = shdisp_triple_led_anime_tbl_twin[clrvari][1][color_index][2];
 #endif
 #endif /* SHDISP_EXTEND_COLOR_LED */
-    
+
     shdisp_bdic_API_IO_multi_write_reg(reg, color_rgb, 3);
 #ifdef SHDISP_COLOR_LED_TWIN
     shdisp_bdic_API_IO_multi_write_reg(reg_twin, color_rgb_twin, 3);
@@ -1623,7 +1620,7 @@ static void shdisp_bdic_write_illumi_triple_color_top(char reg, int color_index)
 /* ------------------------------------------------------------------------- */
 /* shdisp_bdic_write_illumi_triple_color_bottom                              */
 /* ------------------------------------------------------------------------- */
-static void shdisp_bdic_write_illumi_triple_color_bottom(char reg, int color_index) 
+static void shdisp_bdic_write_illumi_triple_color_bottom(char reg, int color_index)
 {
     char color_rgb[3];
 #ifdef SHDISP_COLOR_LED_TWIN
@@ -1632,7 +1629,7 @@ static void shdisp_bdic_write_illumi_triple_color_bottom(char reg, int color_ind
     memset(color_rgb, 0, sizeof(color_rgb));
 
 #ifdef SHDISP_COLOR_LED_TWIN
-    switch(reg) {
+    switch (reg) {
     case BDIC_REG_CH0_A:
        reg_twin = BDIC_REG_CH3_A;
        break;
@@ -1654,7 +1651,7 @@ static void shdisp_bdic_write_illumi_triple_color_bottom(char reg, int color_ind
 /* ------------------------------------------------------------------------- */
 /* shdisp_bdic_cancel_illumi_work                                            */
 /* ------------------------------------------------------------------------- */
-static void shdisp_bdic_cancel_illumi_work(void) 
+static void shdisp_bdic_cancel_illumi_work(void)
 {
 
     int i;
@@ -1792,7 +1789,7 @@ static void shdisp_workqueue_handler_illumi_set_anime_stop(struct work_struct *w
     if (illumi_state.count == SHDISP_TRI_LED_COUNT_1) {
         shdisp_bdic_clear_illumi_state();
         shdisp_bdic_seq_bdic_standby_for_led(SHDISP_DEV_TYPE_LED);
-    }else {
+    } else {
         illumi_state.illumi_state = ILLUMI_STATE_WAIT_RESTART;
     }
 
@@ -1913,7 +1910,7 @@ static void shdisp_workqueue_handler_illumi_restart(struct work_struct *work)
         SHDISP_DEBUG("delay_works[%d] was queued", i);
     }
 
-    msleep(10);
+    shdisp_SYS_API_msleep(10);
     shdisp_bdic_illumi_color_set_a2();
 
     illumi_state.illumi_state = ILLUMI_STATE_WAIT_SET_B2_AREA;
@@ -2063,7 +2060,7 @@ static void shdisp_bdic_seq_bdic_standby_for_led(int dev_type)
 /* ------------------------------------------------------------------------- */
 /* shdisp_bdic_get_color_index_and_reedit                                    */
 /* ------------------------------------------------------------------------- */
-static unsigned char shdisp_bdic_get_color_index_and_reedit(struct shdisp_tri_led *tri_led )
+static unsigned char shdisp_bdic_get_color_index_and_reedit(struct shdisp_tri_led *tri_led)
 {
     unsigned int i;
     unsigned char color = 0xFF;
@@ -2153,8 +2150,9 @@ static void shdisp_bdic_PD_TRI_LED_control(unsigned char request, int param)
         SHDISP_DEBUG("SHDISP_BDIC_REQ_TRI_LED_START tri_led_mode=%d, led_before_mode=%d"
                        , shdisp_bdic_tri_led_mode, shdisp_bdic_tri_led_before_mode);
 #ifdef SHDISP_SYSFS_LED
-        if (param == NO_CURRENT_SET)
+        if (param == NO_CURRENT_SET) {
             shdisp_bdic_clear_current_param();
+        }
 #endif /* SHDISP_SYSFS_LED */
         shdisp_bdic_API_IO_bank_set(0x00);
         switch (shdisp_bdic_tri_led_before_mode) {
@@ -2187,9 +2185,9 @@ static void shdisp_bdic_PD_TRI_LED_control(unsigned char request, int param)
 
         if (shdisp_bdic_tri_led_mode == SHDISP_BDIC_TRI_LED_MODE_NORMAL) {
 #ifdef SHDISP_SYSFS_LED
-            if (param == CURRENT_SET)
+            if (param == CURRENT_SET) {
                 shdisp_bdic_LD_set_led_on_table(rgb_current1);
-            else
+            } else
 #endif /* SHDISP_SYSFS_LED */
             shdisp_bdic_LD_set_led_fix_on_table(led_state_str.bdic_clrvari_index, shdisp_bdic_tri_led_color);
         } else {
@@ -2686,9 +2684,9 @@ static void shdisp_bdic_PD_TRI_LED_control_twin(unsigned char request, int param
 
         if (shdisp_bdic_tri_led_mode_twin == SHDISP_BDIC_TRI_LED_MODE_NORMAL) {
 #ifdef SHDISP_SYSFS_LED
-            if (param == CURRENT_SET)
+            if (param == CURRENT_SET) {
                 shdisp_bdic_LD_set_led_on_table_twin(rgb_current2);
-            else
+            } else
 #endif /* SHDISP_SYSFS_LED */
             shdisp_bdic_LD_set_led_fix_on_table_twin(led_state_str.bdic_clrvari_index, shdisp_bdic_tri_led_color);
         } else {

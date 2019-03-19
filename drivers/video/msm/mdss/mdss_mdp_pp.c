@@ -320,6 +320,10 @@ static int mdss_mdp_hscl_filter[] = {
 #define SHARP_SMOOTH_THR_DEFAULT	8
 #define SHARP_NOISE_THR_DEFAULT	2
 
+#ifdef CONFIG_SHDISP /* CUST_ID_00069 */
+#define MDP_HIST_START_SLEEP (2 * 1000)
+#endif /* CONFIG_SHDISP */
+
 
 struct mdss_pp_res_type {
 	/* logical info */
@@ -1651,6 +1655,9 @@ static int pp_hist_setup(u32 *op, u32 block, struct mdss_mdp_mixer *mix)
 	spin_lock_irqsave(&hist_info->hist_lock, flag);
 	if (hist_info->col_en) {
 		*op |= op_flags;
+#ifdef CONFIG_SHDISP /* CUST_ID_00069 */
+		if (hist_info->frame_cnt) {
+#endif /* CONFIG_SHDISP */
 		if (hist_info->col_state == HIST_IDLE) {
 			/* Kick off collection */
 			if (is_hist_v1)
@@ -1658,6 +1665,9 @@ static int pp_hist_setup(u32 *op, u32 block, struct mdss_mdp_mixer *mix)
 			hist_info->col_state = HIST_START;
 			complete(&hist_info->first_kick);
 		}
+#ifdef CONFIG_SHDISP /* CUST_ID_00069 */
+		}
+#endif /* CONFIG_SHDISP */
 	}
 	spin_unlock_irqrestore(&hist_info->hist_lock, flag);
 	mutex_unlock(&hist_info->hist_mutex);
@@ -3862,6 +3872,11 @@ static int pp_hist_enable(struct pp_hist_col_info *hist_info,
 	hist_info->col_en = true;
 	spin_unlock_irqrestore(&hist_info->hist_lock, flag);
 	hist_info->frame_cnt = req->frame_cnt;
+#ifdef CONFIG_SHDISP /* CUST_ID_00069 */
+	if (req->frame_cnt == 0) {
+		req->frame_cnt = 1;
+	}
+#endif /* CONFIG_SHDISP */
 	INIT_COMPLETION(hist_info->comp);
 	INIT_COMPLETION(hist_info->first_kick);
 	hist_info->hist_cnt_read = 0;
@@ -3976,6 +3991,9 @@ int mdss_mdp_hist_start(struct mdp_histogram_start_req *req)
 		}
 	}
 hist_stop_clk:
+#ifdef CONFIG_SHDISP /* CUST_ID_00069 */
+	usleep(MDP_HIST_START_SLEEP);
+#endif /* CONFIG_SHDISP */
 	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF);
 hist_exit:
 	return ret;
@@ -4219,10 +4237,12 @@ int mdss_mdp_hist_intr_setup(struct mdss_intr *intr, int type)
 
 exit:
 	spin_unlock_irqrestore(&intr->lock, flag);
+#ifndef CONFIG_SHDISP /* CUST_ID_00069 */
 	if (req_clk < 0)
 		mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF);
 	else if (req_clk > 0)
 		mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON);
+#endif /* CONFIG_SHDISP */
 
 	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF);
 	return ret;
@@ -4257,6 +4277,11 @@ static int pp_hist_collect(struct mdp_histogram_data *hist,
 	if (hist_info->col_state != HIST_READY) {
 		spin_unlock_irqrestore(&hist_info->hist_lock, flag);
 		timeout = HIST_WAIT_TIMEOUT(hist_info->frame_cnt);
+#ifdef CONFIG_SHDISP /* CUST_ID_00069 */
+		if (timeout == 0) {
+			timeout = HIST_WAIT_TIMEOUT(2);
+		}
+#endif /* CONFIG_SHDISP */
 		mutex_unlock(&hist_info->hist_mutex);
 		if (PP_LOCAT(hist->block) == MDSS_PP_SSPP_CFG) {
 			res = container_of(hist_info, struct mdss_pipe_pp_res,
@@ -4338,6 +4363,22 @@ hist_collect_exit:
 	return ret;
 }
 
+#ifdef CONFIG_SHDISP /* CUST_ID_00069 */
+static struct mdss_mdp_ctl *mdss_mdp_hist_get_ctl(u32 fb_num)
+{
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+	struct mdss_mdp_ctl *ctl;
+	int i;
+	for (i = 0; i < mdata->nctl; i++) {
+		ctl = mdata->ctl_off + i;
+		if (ctl->power_state == MDSS_PANEL_POWER_ON && ctl->mfd && ctl->mfd->index == fb_num) {
+			return ctl;
+		}
+	}
+	return NULL;
+}
+#endif /* CONFIG_SHDISP */
+
 int mdss_mdp_hist_collect(struct mdp_histogram_data *hist)
 {
 	int i, j, off, ret = 0, temp_ret = 0;
@@ -4354,6 +4395,9 @@ int mdss_mdp_hist_collect(struct mdp_histogram_data *hist)
 	struct mdss_mdp_pipe *pipe;
 	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
 	unsigned long flag;
+#ifdef CONFIG_SHDISP /* CUST_ID_00069 */
+	bool is_hist_v1 = !(mdata->mdp_rev >= MDSS_MDP_HW_REV_103);
+#endif /* CONFIG_SHDISP */
 
 	if ((PP_BLOCK(hist->block) < MDP_LOGICAL_BLOCK_DISP_0) ||
 		(PP_BLOCK(hist->block) >= MDP_BLOCK_MAX))
@@ -4399,6 +4443,38 @@ int mdss_mdp_hist_collect(struct mdp_histogram_data *hist)
 					mdata->mixer_intf[dspp_num].height);
 			if (ret)
 				temp_ret = ret;
+#ifdef CONFIG_SHDISP /* CUST_ID_00069 */
+			hist_info = &mdss_pp_res->dspp_hist[dspp_num];
+			if (hist_info->frame_cnt == 0) {
+				struct mdss_mdp_ctl *ctl = mdss_mdp_hist_get_ctl(disp_num);
+				mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON);
+				spin_lock_irqsave(&hist_info->hist_lock, flag);
+				if (hist_info->col_state == HIST_READY) {
+					u32 sum;
+					pr_debug("old data exist, read to clear\n");
+					spin_unlock_irqrestore(&hist_info->hist_lock, flag);
+					sum = pp_hist_read(ctl_base + 0x1C, hist_info);
+					spin_lock_irqsave(&hist_info->hist_lock, flag);
+					pr_debug("done(%d)\n", sum);
+					hist_info->col_state = HIST_IDLE;
+				}
+				if (hist_info->col_state == HIST_IDLE) {
+					if (is_hist_v1) {
+						writel_relaxed(1, ctl_base); /* kick histogram here (need flush) */
+						mdss_mdp_ctl_write(ctl, MDSS_MDP_REG_CTL_FLUSH, BIT(13 + dspp_num));
+						wmb();
+					}
+					complete(&hist_info->first_kick);
+					hist_info->col_state = HIST_START;
+					pr_debug("kick histogram\n");
+				} else {
+					pr_debug("unexpected state %d\n", hist_info->col_state);
+				}
+				spin_unlock_irqrestore(&hist_info->hist_lock, flag);
+				ret = pp_hist_collect(hist, hists[i], ctl_base, exp_sum);
+				mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF);
+			} else
+#endif /* CONFIG_SHDISP */
 			ret = pp_hist_collect(hist, hists[i], ctl_base,
 								exp_sum);
 			if (ret)
@@ -4676,6 +4752,9 @@ void mdss_mdp_hist_intr_done(u32 isr)
 		/* Histogram Done Interrupt */
 		if (hist_info && is_hist_done && (hist_info->col_en)) {
 			spin_lock(&hist_info->hist_lock);
+#ifdef CONFIG_SHDISP /* CUST_ID_00069 */
+			pr_debug("HISTOGRAM INTR HERE, READ=%d\n", hist_info->read_request);
+#endif /* CONFIG_SHDISP */
 			if (!is_hist_v2)
 				hist_info->col_state = HIST_READY;
 			if (hist_info->read_request == 1) {

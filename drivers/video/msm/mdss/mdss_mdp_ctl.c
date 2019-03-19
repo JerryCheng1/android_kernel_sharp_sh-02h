@@ -1887,6 +1887,11 @@ int mdss_mdp_ctl_splash_finish(struct mdss_mdp_ctl *ctl, bool handoff)
 {
 	switch (ctl->panel_data->panel_info.type) {
 	case MIPI_VIDEO_PANEL:
+#ifdef CONFIG_SHDISP /* CUST_ID_00070 */
+#ifndef SHDISP_DISABLE_HR_VIDEO
+		return mdss_mdp_hr_video_reconfigure_splash_done(ctl, handoff);
+#endif /* SHDISP_DISABLE_HR_VIDEO */
+#endif /* CONFIG_SHDISP */
 	case EDP_PANEL:
 		return mdss_mdp_video_reconfigure_splash_done(ctl, handoff);
 	case MIPI_CMD_PANEL:
@@ -2272,7 +2277,11 @@ struct mdss_mdp_ctl *mdss_mdp_ctl_init(struct mdss_panel_data *pdata,
 				MDSS_MDP_INTF2;
 		ctl->intf_type = MDSS_INTF_DSI;
 		ctl->opmode = MDSS_MDP_CTL_OP_VIDEO_MODE;
+#if defined(CONFIG_SHDISP) && !defined(SHDISP_DISABLE_HR_VIDEO) /* CUST_ID_00070 */
+		ctl->ops.start_fnc = mdss_mdp_hr_video_start;
+#else  /* CONFIG_SHDISP */
 		ctl->ops.start_fnc = mdss_mdp_video_start;
+#endif /* CONFIG_SHDISP */
 #ifdef CONFIG_SHDISP /* CUST_ID_00034 */
 		if (pdata->panel_info.pdest == DISPLAY_1) {
 			ret = mdss_mdp_pp_argc_init();

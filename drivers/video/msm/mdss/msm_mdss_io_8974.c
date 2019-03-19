@@ -418,17 +418,20 @@ int mdss_dsi_clk_init(struct platform_device *pdev,
 			__func__, rc);
 		goto mdss_dsi_clk_err;
 	}
-
+#if !defined(CONFIG_SHDISP) || defined(SHDISP_DISABLE_HR_VIDEO) /* CUST_ID_00070 */
 	if ((ctrl->panel_data.panel_info.type == MIPI_CMD_PANEL) ||
 		ctrl->panel_data.panel_info.mipi.dms_mode ||
 		ctrl->panel_data.panel_info.ulps_suspend_enabled) {
+#endif /* CONFIG_SHDISP */
 		ctrl->mmss_misc_ahb_clk = clk_get(dev, "core_mmss_clk");
 		if (IS_ERR(ctrl->mmss_misc_ahb_clk)) {
 			ctrl->mmss_misc_ahb_clk = NULL;
 			pr_info("%s: Unable to get mmss misc ahb clk\n",
 				__func__);
 		}
+#if !defined(CONFIG_SHDISP) || defined(SHDISP_DISABLE_HR_VIDEO) /* CUST_ID_00070 */
 	}
+#endif /* CONFIG_SHDISP */
 
 	ctrl->byte_clk = clk_get(dev, "byte_clk");
 	if (IS_ERR(ctrl->byte_clk)) {

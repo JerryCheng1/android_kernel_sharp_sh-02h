@@ -174,8 +174,8 @@
 #define TIMER_RESO 5
 
 /* SHMDS_HUB_0604_01 add S */
-#define ACC_CMN_MAX               4096
-#define ACC_CMN_MIN              -4096
+#define ACC_CMN_MAX               8192
+#define ACC_CMN_MIN              -8192
 #define MAG_CMN_MAX              20000
 #define MAG_CMN_MIN             -20000
 /* SHMDS_HUB_0604_01 add E */
@@ -394,6 +394,7 @@ void shub_input_report_exif_pickup_det(void);                           /* SHMDS
 void shub_input_report_exif_mot_det(unsigned char det_info);
 void shub_input_report_exif_shex_acc(int32_t *data);
 void shub_input_report_exif_judge(void);
+int shub_vibe_notify_check(int kind);                   /* SHMDS_HUB_0213_01 add */
 int shub_set_default_parameter(void);
 /* SHMDS_HUB_0201_01 add E */
 int shub_set_default_ped_parameter(void);               /* SHMDS_HUB_0204_19 add */

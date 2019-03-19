@@ -11,13 +11,14 @@
  */
 
 #include "sharp-pinctrl-prox.dtsi"
-#include "sharp-pinctrl-shflip.dtsi"
-#include "sharp-pinctrl-nfc.dtsi"
 #include "sharp-pinctrl-shgrip.dtsi"
-#include "sharp-pinctrl-hayabusa-shdisp.dtsi"
 #include "sharp-pinctrl-shub.dtsi"
-#include "sharp-pinctrl-dl85-sdcc.dtsi"
+
+#include "sharp-pinctrl-nfc.dtsi"
+#include "sharp-pinctrl-shflip.dtsi"
+#include "sharp-pinctrl-hayabusa-shdisp.dtsi"
 #include "sharp-pinctrl-wifi.dtsi"
+#include "sharp-pinctrl-dl85-sdcc.dtsi"
 
 &blsp1_spi1_mi_so_active {
 	/delete-property/ bias-disable;

@@ -294,22 +294,6 @@ struct shdisp_panel_operations *shdisp_hayabusa_API_create(void)
 {
     return &shdisp_hayabusa_fops;
 }
-/* ------------------------------------------------------------------------- */
-/* shdisp_hayabusa_API_vcom_tracking                                         */
-/* ------------------------------------------------------------------------- */
-int shdisp_hayabusa_API_vcom_tracking(int tracking)
-{
-    return SHDISP_RESULT_SUCCESS;
-}
-
-/* ------------------------------------------------------------------------- */
-/* shdisp_hayabusa_API_vcom_is_adjusted                                      */
-/* ------------------------------------------------------------------------- */
-int shdisp_hayabusa_API_vcom_is_adjusted(void)
-{
-    return (IS_FLICKER_ADJUSTED(shdisp_panel_ctx.vcom_nvram));
-}
-
 
 /* ------------------------------------------------------------------------- */
 /* shdisp_hayabusa_calc_vcom_param                                           */
@@ -467,14 +451,6 @@ static int shdisp_hayabusa_API_init_io(struct shdisp_panel_context *panel_ctx)
         shdisp_hayabusa_hw_reset(false);
         shdisp_hayabusa_external_clk_ctl(true);
     }
-
-#ifdef SHDISP_ANDY_VDD
-    if (shdisp_API_check_upper_unit() != SHDISP_RESULT_SUCCESS) {
-        shdisp_hayabusa_vddio_on();
-        shdisp_hayabusa_vddio_off();
-    }
-#endif /* SHDISP_ANDY_VDD */
-
     goto exit;
 exit_with_error:
     destroy_workqueue(shdisp_wq_hayabusa);
@@ -1155,7 +1131,7 @@ static int shdisp_hayabusa_diag_set_flicker_param_internal(struct shdisp_diag_fl
             hayabusa_wdata[0] = hayabusa_rdata_tmp[i];
             ret = shdisp_panel_API_mipi_diag_write_reg(SHDISP_DTYPE_DCS_WRITE1, Hayabusa_VCOM_Reg[i], &hayabusa_wdata[0], 1);
             if (ret) {
-                SHDISP_ERR("<RESULT_FAILURE> mipi_sharp_diag_write_reg!!" );
+                SHDISP_ERR("<RESULT_FAILURE> mipi_sharp_diag_write_reg!!");
                 break;
             }
         }
@@ -1819,7 +1795,7 @@ static int shdisp_hayabusa_diag_set_gmmtable_and_voltage(struct shdisp_diag_gamm
         for (i = 0; i < j; i++) {
             ret = shdisp_panel_API_mipi_diag_write_reg(SHDISP_DTYPE_DCS_WRITE1, hayabusa_gmm_addr[i], &hayabusa_gmm_wdata[i], 1);
             if (ret) {
-                SHDISP_ERR("<RESULT_FAILURE> shdisp_panel_API_mipi_diag_write_reg!!" );
+                SHDISP_ERR("<RESULT_FAILURE> shdisp_panel_API_mipi_diag_write_reg!!");
                 goto shdisp_end;
             }
         }
@@ -1842,7 +1818,7 @@ static int shdisp_hayabusa_diag_set_gmmtable_and_voltage(struct shdisp_diag_gamm
     for (i = 0; i < j; i++) {
         ret = shdisp_panel_API_mipi_diag_write_reg(SHDISP_DTYPE_DCS_WRITE1, hayabusa_gmm_addr[i], &hayabusa_gmm_wdata[i], 1);
         if (ret) {
-            SHDISP_ERR("<RESULT_FAILURE> shdisp_panel_API_mipi_diag_write_reg!!" );
+            SHDISP_ERR("<RESULT_FAILURE> shdisp_panel_API_mipi_diag_write_reg!!");
             goto shdisp_end;
         }
     }
@@ -2446,7 +2422,7 @@ static void shdisp_hayabusa_API_dump(int type)
 
 #ifdef SHDISP_HAYABUSA_VDD
 /* ------------------------------------------------------------------------- */
-/*      shdisp_hayabusa_vddio_on                                                 */
+/*      shdisp_hayabusa_vddio_on                                             */
 /* ------------------------------------------------------------------------- */
 static int shdisp_hayabusa_vddio_on(void)
 {
@@ -2473,7 +2449,7 @@ static int shdisp_hayabusa_vddio_on(void)
 }
 
 /* ------------------------------------------------------------------------- */
-/*      shdisp_hayabusa_vddio_off                                                */
+/*      shdisp_hayabusa_vddio_off                                            */
 /* ------------------------------------------------------------------------- */
 static int shdisp_hayabusa_vddio_off(void)
 {
@@ -2532,11 +2508,11 @@ static void shdisp_hayabusa_power_off_for_shutdown(void)
     SHDISP_TRACE("in");
     SHDISP_DEBUG("excute hayabusa HW reset");
     shdisp_hayabusa_hw_reset(true);
-    usleep(80 * 1000);
+    shdisp_SYS_API_usleep(80 * 1000);
 #ifdef SHDISP_HAYABUSA_VDD
     SHDISP_DEBUG("hayabusa vddio off");
     shdisp_hayabusa_vdd_off();
-    usleep(60 * 1000);
+    shdisp_SYS_API_usleep(60 * 1000);
 #endif /* SHDISP_HAYABUSA_VDD */
     SHDISP_TRACE("out");
 }
@@ -2720,7 +2696,7 @@ static int shdisp_hayabusa_power_mode_chk(unsigned char addr)
 #endif /* SHDISP_POWER_MODE_CHK */
 
 /* ------------------------------------------------------------------------- */
-/* shdisp_hayabusa_sleepout_wait_dsi                                       */
+/* shdisp_hayabusa_sleepout_wait_dsi                                         */
 /* ------------------------------------------------------------------------- */
 static int shdisp_hayabusa_sleepout_wait_dsi(void)
 {
@@ -3082,6 +3058,7 @@ static int shdisp_hayabusa_mipi_cmd_lcd_on(void)
         return ret;
     }
 
+#if defined(SHDISP_MODEL_MID)
     switch (version) {
     case VER_CUT1_1:
     case VER_CUT2_0:
@@ -3094,6 +3071,7 @@ static int shdisp_hayabusa_mipi_cmd_lcd_on(void)
     default:
         break;
     }
+#endif /* SHDISP_MODEL_MID */
 
     switch (version) {
     case VER_CUT2_0:
@@ -3269,9 +3247,9 @@ static int shdisp_hayabusa_mipierr_clear(void)
     return ret;
 }
 
-/*---------------------------------------------------------------------------*/
+/* ------------------------------------------------------------------------- */
 /* shdisp_hayabusa_workqueue_handler                                         */
-/*---------------------------------------------------------------------------*/
+/* ------------------------------------------------------------------------- */
 static void shdisp_hayabusa_workqueue_handler(struct work_struct *work)
 {
     int ret;
@@ -3315,9 +3293,9 @@ static void shdisp_hayabusa_workqueue_handler(struct work_struct *work)
     return;
 }
 
-/*---------------------------------------------------------------------------*/
+/* ------------------------------------------------------------------------- */
 /* shdisp_hayabusa_int_isr_common                                            */
-/*---------------------------------------------------------------------------*/
+/* ------------------------------------------------------------------------- */
 static void shdisp_hayabusa_int_isr_common(void)
 {
     int ret;
@@ -3354,9 +3332,9 @@ exit:
     SHDISP_TRACE("out");
 }
 
-/*---------------------------------------------------------------------------*/
+/* ------------------------------------------------------------------------- */
 /* shdisp_hayabusa_int_isr                                                   */
-/*---------------------------------------------------------------------------*/
+/* ------------------------------------------------------------------------- */
 static irqreturn_t shdisp_hayabusa_int_isr(int irq_num, void *data)
 {
     SHDISP_TRACE("in irq=%d", irq_num);
@@ -3367,9 +3345,9 @@ static irqreturn_t shdisp_hayabusa_int_isr(int irq_num, void *data)
     return IRQ_HANDLED;
 }
 
-/*---------------------------------------------------------------------------*/
+/* ------------------------------------------------------------------------- */
 /* shdisp_hayabusa_check_mipi_err                                            */
-/*---------------------------------------------------------------------------*/
+/* ------------------------------------------------------------------------- */
 static int shdisp_hayabusa_check_mipi_err(void)
 {
     SHDISP_TRACE("in");

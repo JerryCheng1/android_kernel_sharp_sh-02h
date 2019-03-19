@@ -24,7 +24,7 @@
 	interrupt-parent = <&intc>;
 
 	chosen {
-		bootargs = "sched_enable_hmp=1 sched_enable_power_aware=1 sched_same_power_cost_cpus=0-3";
+		bootargs = "sched_enable_hmp=1 sched_enable_power_aware=1";
 	};
 
 	aliases {
@@ -1471,6 +1471,7 @@
 			qcom,cdc-dmic-sample-rate = <4800000>;
 			qcom,cdc-mad-dmic-rate = <600000>;
 			qcom,cdc-variant = "WCD9330";
+			qcom,cdc-spkdrv-ocp-curr-limit-mA = <2625>;
 		};
 	};
 
@@ -2587,14 +2588,24 @@
 				"auxpcm-active",
 				"mi2s-active",
 				"active";
-		pinctrl-0 = <&pri_mi2s_sleep>, <&pri_mi2s_sd0_sleep>,
+// fpsensor-S
+//		pinctrl-0 = <&pri_mi2s_sleep>, <&pri_mi2s_sd0_sleep>,
+//				<&sec_aux_pcm_sleep>, <&sec_aux_pcm_din_sleep>;
+//		pinctrl-1 = <&pri_mi2s_sleep>, <&pri_mi2s_sd0_sleep>,
+//				<&sec_aux_pcm_active>, <&sec_aux_pcm_din_active>;
+//		pinctrl-2 = <&pri_mi2s_active>, <&pri_mi2s_sd0_active>,
+//				<&sec_aux_pcm_sleep>, <&sec_aux_pcm_din_sleep>;
+//		pinctrl-3 = <&pri_mi2s_active>, <&pri_mi2s_sd0_active>,
+//				<&sec_aux_pcm_active>, <&sec_aux_pcm_din_active>;
+		pinctrl-0 = <&pri_mi2s_sleep>,
 				<&sec_aux_pcm_sleep>, <&sec_aux_pcm_din_sleep>;
-		pinctrl-1 = <&pri_mi2s_sleep>, <&pri_mi2s_sd0_sleep>,
+		pinctrl-1 = <&pri_mi2s_sleep>,
 				<&sec_aux_pcm_active>, <&sec_aux_pcm_din_active>;
-		pinctrl-2 = <&pri_mi2s_active>, <&pri_mi2s_sd0_active>,
+		pinctrl-2 = <&pri_mi2s_active>,
 				<&sec_aux_pcm_sleep>, <&sec_aux_pcm_din_sleep>;
-		pinctrl-3 = <&pri_mi2s_active>, <&pri_mi2s_sd0_active>,
+		pinctrl-3 = <&pri_mi2s_active>,
 				<&sec_aux_pcm_active>, <&sec_aux_pcm_din_active>;
+// fpsensor-E
 		asoc-platform = <&pcm0>, <&pcm1>, <&pcm2>, <&voip>, <&voice>,
 				<&loopback>, <&compress>, <&hostless>,
 				<&afe>, <&lsm>, <&routing>, <&cpe>, <&compr>;
@@ -2707,9 +2718,11 @@
 		compatible = "qcom,msm-pcm-loopback";
 	};
 
-	qcom,msm-voice-svc {
-		compatible = "qcom,msm-voice-svc";
-	};
+/* => SH_AUDIO_DRIVER 20-069 */
+//	qcom,msm-voice-svc {
+//		compatible = "qcom,msm-voice-svc";
+//	};
+/* <= SH_AUDIO_DRIVER 20-069 */
 
 	cpe: qcom,msm-cpe-lsm {
 		compatible = "qcom,msm-cpe-lsm";

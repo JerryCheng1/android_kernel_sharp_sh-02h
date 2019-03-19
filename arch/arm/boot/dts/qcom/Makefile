@@ -261,7 +261,7 @@ dtb-$(CONFIG_ARCH_APQ8084) += apq8084-v1.0-old-pwr-grid-liquid.dtb \
 #	apq8094-v2.1-fluid.dtb \
 #	apq8094-v2.1-dragonboard.dtb
 
-#dtb-$(CONFIG_ARCH_MSM8992) += \
+dtb-$(CONFIG_ARCH_MSM8992) += \
 #	msm8992-pmi8994-pm8004-mtp.dtb
 #	msm8992-sim.dtb \
 #	msm8992-rumi.dtb \
@@ -269,16 +269,20 @@ dtb-$(CONFIG_ARCH_APQ8084) += apq8084-v1.0-old-pwr-grid-liquid.dtb \
 #	msm8992-mtp.dtb \
 #	msm8992-pmi8994-pm8004-cdp.dtb \
 
-dtb-$(CONFIG_ARCH_LYNX_DL80) += \
-	msm8992-sharp-dl80-mtp.dtb
-dtb-$(CONFIG_ARCH_PA30) += \
-	msm8992-sharp-pa30-mtp.dtb
-dtb-$(CONFIG_ARCH_PA31) += \
-	msm8992-sharp-pa31-mtp.dtb
-dtb-$(CONFIG_ARCH_DECKARD_AL25) += \
-	msm8992-sharp-al25-mtp.dtb
-dtb-$(CONFIG_ARCH_LYNX_DL85) += \
-	msm8992-sharp-dl85-mtp.dtb
+dtb-$(CONFIG_ARCH_LYNX_DL70) += \
+	msm8994-sharp-dl70-v1.dtb \
+	msm8994-sharp-dl70-v2.0.dtb \
+	msm8994-sharp-dl70-v2.1.dtb
+dtb-$(CONFIG_ARCH_DECKARD_AL20) += \
+	msm8994-sharp-al20-v1.dtb \
+	msm8994-sharp-al20-v2.0.dtb \
+	msm8994-sharp-al20-v2.1.dtb
+dtb-$(CONFIG_ARCH_LYNX_DL80) += msm8992-sharp-dl80-mtp.dtb
+ifeq ($(CONFIG_ARCH_MM7),y)
+dtb-$(CONFIG_ARCH_MM7) += msm8992-sharp-mm7-mtp.dtb
+else
+dtb-$(CONFIG_ARCH_LYNX_DL85) += msm8992-sharp-dl85-mtp.dtb
+endif
 
 DTB_NAMES := $(subst $\",,$(CONFIG_BUILD_ARM_APPENDED_DTB_IMAGE_NAMES))
 ifneq ($(DTB_NAMES),)

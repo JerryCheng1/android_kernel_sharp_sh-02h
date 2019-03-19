@@ -670,6 +670,7 @@ module_param(dbg_level, int, 0600);
 #define SHUB_FACE_CHECK_Z_MAX_UP     (1100)
 /* SHMDS_HUB_1302_01 add E */
 
+#define SHUB_SIZE_PEDO_STEP_PRM      14             /* SHMDS_HUB_0335_01 add */
 
 ///////////////////////////////////////
 // union
@@ -889,6 +890,8 @@ static uint8_t shub_lowpower_mode = 0;  /* SHMDS_HUB_0701_09 add */
 static uint8_t shub_operation_mode = 1; /* SHMDS_HUB_0701_09 add */
 
 static uint16_t shub_failed_init_param = 0; /* SHMDS_HUB_0319_01 add */
+
+static bool shub_mot_still_enable_flag = false; /* SHMDS_HUB_0332_01 add */
 
 #ifdef SHUB_SUSPEND
 static bool s_is_suspend;
@@ -3684,7 +3687,7 @@ static int32_t shub_set_delay_exec(int32_t arg_iSensType, int32_t arg_iLoggingTy
     DBG(DBG_LV_INFO , "LogF Period:ori=%d grav=%d linear=%d rot=%d game=%d magrot=%d\n",
             cmd.prm.u8[0], cmd.prm.u8[1], cmd.prm.u8[2],
             cmd.prm.u8[3] , cmd.prm.u8[4], cmd.prm.u8[5]);
-    ret = shub_hostcmd(&cmd, &res, EXE_HOST_ALL, 7);
+    ret = shub_hostcmd(&cmd, &res, EXE_HOST_ALL, 6); /* SHMDS_HUB_0329_01 mod */
     if((SHUB_RC_OK != ret) || (0 != res.err.u16)) {
         DBG(DBG_LV_ERROR, "FUSION_HC_LOGGING_SET_CYCLE err(%x)\n", res.err.u16);
         return SHUB_RC_ERR;
@@ -3728,10 +3731,7 @@ static int32_t shub_set_param_exec(int32_t type , int32_t *param)
         }
 
         cmd.cmd.u16 = HC_SET_PEDO2_STEP_PARAM;
-/* SHMDS_HUB_0204_14 mod S */
-//      ret = shub_hostcmd(&cmd, &res, EXE_HOST_ALL, 13);
-        ret = shub_hostcmd(&cmd, &res, EXE_HOST_ALL, 14);
-/* SHMDS_HUB_0204_14 mod E */
+        ret = shub_hostcmd(&cmd, &res, EXE_HOST_ALL, SHUB_SIZE_PEDO_STEP_PRM); /* SHMDS_HUB_0204_14 mod */
         if((SHUB_RC_OK != ret) || (0 != res.err.u16)) {
             DBG(DBG_LV_ERROR, "HC_SET_PEDO2_STEP_PARAM err(%x)\n", res.err.u16);
             return SHUB_RC_ERR;
@@ -3754,10 +3754,7 @@ static int32_t shub_set_param_exec(int32_t type , int32_t *param)
         cmd.prm.u8[0x0d] = (uint8_t)param[0x0d];        // SHMDS_HUB_0204_14 add
 
         cmd.cmd.u16 = HC_SET_PEDO_STEP_PARAM;
-/* SHMDS_HUB_0204_14 mod S */
-//      ret = shub_hostcmd(&cmd, &res, EXE_HOST_ALL, 12);
-        ret = shub_hostcmd(&cmd, &res, EXE_HOST_ALL, 14);
-/* SHMDS_HUB_0204_14 mod E */
+        ret = shub_hostcmd(&cmd, &res, EXE_HOST_ALL, SHUB_SIZE_PEDO_STEP_PRM); /* SHMDS_HUB_0204_14 mod */
         if((SHUB_RC_OK != ret) || (0 != res.err.u16)) {
             DBG(DBG_LV_ERROR, "HC_SET_PEDO_STEP_PARAM err(%x)\n", res.err.u16);
             return SHUB_RC_ERR;
@@ -3933,6 +3930,13 @@ static int32_t shub_set_param_exec(int32_t type , int32_t *param)
             return SHUB_RC_ERR;
         }
 
+/* SHMDS_HUB_0332_01 add S */
+        if (param[9] & 0x01) {
+            shub_mot_still_enable_flag = true;
+        } else {
+            shub_mot_still_enable_flag = false;
+        }
+/* SHMDS_HUB_0332_01 add E */
         ret = shub_set_delay_exec(SHUB_ACTIVE_MOTIONDEC, 0);
         if(ret != SHUB_RC_OK) {
             return SHUB_RC_ERR;
@@ -4373,6 +4377,13 @@ static int32_t shub_get_param_exec(int32_t type ,int32_t *param)
             return SHUB_RC_ERR;
         }
         param[9] = (int32_t)(uint8_t)RESU8_TO_X8(res,0);
+/* SHMDS_HUB_0332_01 add S */
+        if (param[9] & 0x01) {
+            shub_mot_still_enable_flag = true;
+        } else {
+            shub_mot_still_enable_flag = false;
+        }
+/* SHMDS_HUB_0332_01 add E */
     }else if(type == MCU_TASK_CYCLE){
         cmd.cmd.u16 = HC_SENSOR_TSK_GET_CYCLE;
         ret = shub_hostcmd(&cmd, &res, EXE_HOST_ALL, 0);
@@ -4859,7 +4870,7 @@ static int32_t shub_activate_pedom_exec(int32_t arg_iSensType, int32_t arg_iEnab
         return SHUB_RC_ERR;
     }
 
-    memcpy(cmd.prm.u8,res.res.u8, 13);
+    memcpy(cmd.prm.u8,res.res.u8, SHUB_SIZE_PEDO_STEP_PRM); /* SHMDS_HUB_0335_01 mod */
 
     /* CountStep */
     if((iCurrentEnable & (STEPCOUNT_GROUP_MASK |
@@ -4881,7 +4892,7 @@ static int32_t shub_activate_pedom_exec(int32_t arg_iSensType, int32_t arg_iEnab
 
     cmd.cmd.u16 = HC_SET_PEDO_STEP_PARAM;
     DBG(DBG_LV_INFO, "Enable PEDO en=%d onstep=%d\n" ,cmd.prm.u8[0],cmd.prm.u8[3]);
-    ret = shub_hostcmd(&cmd, &res, EXE_HOST_ALL, 13);
+    ret = shub_hostcmd(&cmd, &res, EXE_HOST_ALL, SHUB_SIZE_PEDO_STEP_PRM); /* SHMDS_HUB_0335_01 mod */
     if((SHUB_RC_OK != ret) || (0 != res.err.u16)) {
         DBG(DBG_LV_ERROR, "HC_SET_PEDO_STEP_PARAM err(%x)\n", res.err.u16);
         return SHUB_RC_ERR;
@@ -4925,11 +4936,11 @@ static int32_t shub_activate_significant_exec(int32_t arg_iSensType, int32_t arg
         return SHUB_RC_ERR;
     }
 
-    memcpy(cmd.prm.u8,res.res.u8, 13);
+    memcpy(cmd.prm.u8,res.res.u8, SHUB_SIZE_PEDO_STEP_PRM); /* SHMDS_HUB_0335_01 mod */
 
     cmd.prm.u8[0] = 0;
     cmd.cmd.u16 = HC_SET_PEDO_STEP_PARAM;
-    ret = shub_hostcmd(&cmd, &res, EXE_HOST_ALL, 13);
+    ret = shub_hostcmd(&cmd, &res, EXE_HOST_ALL, SHUB_SIZE_PEDO_STEP_PRM); /* SHMDS_HUB_0335_01 mod */
     if((SHUB_RC_OK != ret) || (0 != res.err.u16)) {
         DBG(DBG_LV_ERROR, "HC_SET_PEDO_STEP_PARAM err(%x)\n", res.err.u16);
         return SHUB_RC_ERR;
@@ -5025,7 +5036,7 @@ static int32_t shub_activate_significant_exec(int32_t arg_iSensType, int32_t arg
         return SHUB_RC_ERR;
     }
 
-    memcpy(cmd.prm.u8,res.res.u8, 13);
+    memcpy(cmd.prm.u8,res.res.u8, SHUB_SIZE_PEDO_STEP_PRM); /* SHMDS_HUB_0335_01 mod */
 
     if(((iCurrentSensorEnable | iCurrentLoggingEnable) & (STEPCOUNT_GROUP_MASK |
                     STEPDETECT_GROUP_MASK |
@@ -5036,7 +5047,7 @@ static int32_t shub_activate_significant_exec(int32_t arg_iSensType, int32_t arg
     }
 
     cmd.cmd.u16 = HC_SET_PEDO_STEP_PARAM;
-    ret = shub_hostcmd(&cmd, &res, EXE_HOST_ALL, 13);
+    ret = shub_hostcmd(&cmd, &res, EXE_HOST_ALL, SHUB_SIZE_PEDO_STEP_PRM); /* SHMDS_HUB_0335_01 mod */
     if((SHUB_RC_OK != ret) || (0 != res.err.u16)) {
         DBG(DBG_LV_ERROR, "HC_SET_PEDO_STEP_PARAM err(%x)\n", res.err.u16);
         return SHUB_RC_ERR;
@@ -5264,10 +5275,12 @@ static int32_t shub_activate_exec(int32_t arg_iSensType, int32_t arg_iEnable)
         }
         s_micon_param.gyro_cal = cmd.prm.u8[1] ;
     }
-
+/* SHMDS_HUB_0332_01 mod S */
 /* SHMDS_HUB_0317_01 add S */
     if ( enable_sensor &
-        ( SHUB_ACTIVE_ACC | GYRO_GROUP_MASK | MAG_GROUP_MASK | SHUB_ACTIVE_RV_NONGYRO | SHUB_ACTIVE_RV_NONMAG | FUSION9AXIS_GROUP_MASK ) ) {
+        ( SHUB_ACTIVE_ACC | GYRO_GROUP_MASK | MAG_GROUP_MASK | SHUB_ACTIVE_RV_NONGYRO | SHUB_ACTIVE_RV_NONMAG | FUSION9AXIS_GROUP_MASK ) ||
+        ((enable_sensor & SHUB_ACTIVE_MOTIONDEC) && shub_mot_still_enable_flag) ) {
+/* SHMDS_HUB_0332_01 mod E */
         newAccMode = 0;
         newDeepSleepMode = 0;
     } else {
@@ -6327,6 +6340,8 @@ int32_t shub_init_param( void )
     
     shub_dbg_clr_irq_log();				// SHMDS_HUB_0701_03 add
 
+    shub_mot_still_enable_flag = false; /* SHMDS_HUB_0332_01 add */
+
     return SHUB_RC_OK;
 }
 
@@ -7174,22 +7189,25 @@ int32_t shub_get_current_active_logging(void)
 int32_t shub_set_param(int32_t type,int32_t* data)
 {
     int32_t ret = SHUB_RC_OK;
+    IoCtlParam local_param;     /* SHMDS_HUB_0331_01 add */
 
     if(data == NULL) {
         DBG(DBG_LV_ERROR, "arg error\n");
         return SHUB_RC_ERR;
     }
 
+    memcpy(local_param.m_iParam, data, sizeof(local_param.m_iParam));       /* SHMDS_HUB_0331_01 add */
+
     if(atomic_read(&g_FWUpdateStatus)){
         DBG(DBG_LV_ERROR, "FW Update or Recovery Now:%s\n", __FUNCTION__);
         return SHUB_RC_OK;
     }
     mutex_lock(&userReqMutex);
-    shub_set_param_check_exif(type, data);      // SHMDS_HUB_0207_01 add
-    ret = shub_set_param_exec(type, data);
+    shub_set_param_check_exif(type, local_param.m_iParam);      /* SHMDS_HUB_0207_01 add  SHMDS_HUB_0331_01 mod */
+    ret = shub_set_param_exec(type, local_param.m_iParam);      /* SHMDS_HUB_0331_01 mod */
 /* SHMDS_HUB_0207_01 add S */
     if((ret == SHUB_RC_OK) && (type == APP_PEDOMETER)) {
-        shub_set_enable_ped_exif_flg(data[0]);
+        shub_set_enable_ped_exif_flg(local_param.m_iParam[0]);  /* SHMDS_HUB_0331_01 mod */
     }
 /* SHMDS_HUB_0207_01 add E */
     mutex_unlock(&userReqMutex);
@@ -7921,11 +7939,11 @@ int32_t shub_suspend( struct spi_device *client, pm_message_t mesg )
             goto ERROR;
         }
 
-        memcpy(cmd.prm.u8,res.res.u8, 13);
+        memcpy(cmd.prm.u8,res.res.u8, SHUB_SIZE_PEDO_STEP_PRM); /* SHMDS_HUB_0335_01 mod */
         cmd.prm.u8[3] = 0;
 
         cmd.cmd.u16 = HC_SET_PEDO_STEP_PARAM;
-        ret = shub_hostcmd(&cmd, &res, EXE_HOST_ALL, 13);
+        ret = shub_hostcmd(&cmd, &res, EXE_HOST_ALL, SHUB_SIZE_PEDO_STEP_PRM); /* SHMDS_HUB_0335_01 mod */
         if((SHUB_RC_OK != ret) || (0 != res.err.u16)) {
             DBG(DBG_LV_ERROR, "HC_SET_PEDO_STEP_PARAM err(%x)\n", res.err.u16);
             goto ERROR;
@@ -7995,11 +8013,11 @@ int32_t shub_resume( struct spi_device *client )
             return SHUB_RC_ERR;
         }
 
-        memcpy(cmd.prm.u8,res.res.u8, 13);
+        memcpy(cmd.prm.u8,res.res.u8, SHUB_SIZE_PEDO_STEP_PRM); /* SHMDS_HUB_0335_01 mod */
         cmd.prm.u8[3] = 1;
 
         cmd.cmd.u16 = HC_SET_PEDO_STEP_PARAM;
-        ret = shub_hostcmd(&cmd, &res, EXE_HOST_ALL, 13);
+        ret = shub_hostcmd(&cmd, &res, EXE_HOST_ALL, SHUB_SIZE_PEDO_STEP_PRM); /* SHMDS_HUB_0335_01 mod */
         if((SHUB_RC_OK != ret) || (0 != res.err.u16)) {
             DBG(DBG_LV_ERROR, "HC_SET_PEDO_STEP_PARAM err(%x)\n", res.err.u16);
             return SHUB_RC_ERR;

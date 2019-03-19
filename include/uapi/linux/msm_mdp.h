@@ -77,6 +77,7 @@
 
 #define MSMFB_MIPI_DSI_CHECK _IOWR(MSMFB_IOCTL_MAGIC, 185, struct mdp_mipi_check_param)
 #define MSMFB_MIPI_DSI_CLKCHG _IOW(MSMFB_IOCTL_MAGIC, 186, struct mdp_mipi_clkchg_param)
+#define MSMFB_SET_MFR _IOW(MSMFB_IOCTL_MAGIC, 187, int)
 
 #define FB_TYPE_3D_PANEL 0x10101010
 #define MDP_IMGTYPE2_START 0x10000
@@ -1246,8 +1247,15 @@ struct mdp_mipi_clkchg_host {
 	unsigned char timing_ctrl[12];
 };
 
+struct mdp_mipi_clkchg_panel_andy {
+	unsigned char rtn;
+	unsigned char gip;
+	unsigned char vbp;
+	unsigned char vfp;
+};
 typedef union mdp_mipi_clkchg_panel_tag {
 /* Please insert panel driver parameters here, if need. */
+	struct mdp_mipi_clkchg_panel_andy andy;
 } mdp_mipi_clkchg_panel_t;
 
 struct mdp_mipi_clkchg_param {

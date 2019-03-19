@@ -250,11 +250,6 @@ static struct fg_mem_data fg_data[FG_DATA_MAX] = {
 #endif /* CONFIG_BATTERY_SH */
 };
 
-static bool sram_update_once = false;
-
-static int shadow_current = 0;
-static int shadow_voltage = 0;
-
 static int fg_debug_mask;
 module_param_named(
 	debug_mask, fg_debug_mask, int, S_IRUSR | S_IWUSR
@@ -1482,22 +1477,6 @@ static int64_t twos_compliment_extend(int64_t val, int nbytes)
 #define LSB_16B_NUMRTR		152587
 #define LSB_16B_DENMTR		1000
 #ifdef CONFIG_BATTERY_SH
-#define SMBCHG_MISC_REVISION2	0x01
-static int sh_get_pmic_version(struct fg_chip *chip,u8 *pmic_ver)
-{
-	int rc;
-
-	rc = fg_read(chip, pmic_ver,
-			0x1600 + SMBCHG_MISC_REVISION2, 1);
-	if (rc) {
-		pr_err("spmi read failed: addr=%03X, rc=%d\n",
-				(0x1600 + SMBCHG_MISC_REVISION2), rc);
-		return rc;
-	}
-
-	return 0;
-}
-
 #define USB_PLUP_VOLTAGE_BIAS	2700
 static int sh_get_usb_voltage(struct fg_chip *chip)
 {
@@ -1507,38 +1486,6 @@ static int sh_get_usb_voltage(struct fg_chip *chip)
 	usbid_code = get_sram_prop_now(chip,FG_DATA_USB_ID);
 
 	val = (usbid_code * USB_PLUP_VOLTAGE_BIAS / 4096);
-
-	return val;
-}
-
-#define PULL_UP_OHM_24K	24*1000
-#define PULL_UP_OHM_120K	120*1000
-static int sh_get_usb_resistance(struct fg_chip *chip)
-{
-	int rc;
-	int pullup_ohm = 0;
-	int usbid_code;
-	int val;
-	u8  pmic_ver;
-
-	rc = sh_get_pmic_version(chip,&pmic_ver);
-
-	if(rc){
-		pr_err("failed sh_get_pmic_version rc = %d\n",rc);
-		return 0;
-	}
-
-	if( pmic_ver >= 0x02 ){
-		pullup_ohm = PULL_UP_OHM_120K;
-	}else if( pmic_ver == 0x01 ){
-		pullup_ohm = PULL_UP_OHM_24K;
-	}else{
-		pullup_ohm = PULL_UP_OHM_120K;
-	}
-
-	usbid_code = get_sram_prop_now(chip,FG_DATA_USB_ID);
-
-	val = ((usbid_code * pullup_ohm) / (4096 - usbid_code));
 
 	return val;
 }
@@ -1619,43 +1566,6 @@ static int sh_fg_sram_fg_term_current_bit_set(struct fg_chip *chip)
 
 	return 0;
 }
-
-int sh_get_direct_current_and_voltage(void)
-{
-	int rc = 0;
-	u8 reg[2];
-	s16 temp;
-
-	if(sram_update_once)
-	{
-		pr_err("sh_get_direct_current() start\n");
-
-		/* Get both shadow_current and shadow_voltage */
-		rc = fg_mem_read(the_chip, reg, fg_data[FG_DATA_CURRENT].address,
-				fg_data[FG_DATA_CURRENT].len, fg_data[FG_DATA_CURRENT].offset, 1);
-		if (rc) {
-			pr_err("Failed to update sram data\n");
-		}
-
-		temp = reg[0] | (reg[1] << 8);
-		shadow_current = div_s64((s64)temp * LSB_16B_NUMRTR, LSB_16B_DENMTR);
-		pr_err("CUR_SHADOW(0x5CC, 3): %d, 0x%x\n", shadow_current, temp);
-
-		rc = fg_mem_read(the_chip, reg, fg_data[FG_DATA_VOLTAGE].address,
-				fg_data[FG_DATA_VOLTAGE].len, fg_data[FG_DATA_VOLTAGE].offset, 0);
-		if (rc) {
-			pr_err("Failed to update sram data\n");
-		}
-
-		temp = reg[0] | (reg[1] << 8);
-		shadow_voltage = div_u64((u64)(u16)temp * LSB_16B_NUMRTR, LSB_16B_DENMTR);
-		pr_err("VOL_SHADOW(0x5CC, 1): %d, 0x%x\n", shadow_voltage, temp);
-
-	}
-
-	return rc;
-}
-
 #endif /* CONFIG_BATTERY_SH */
 
 #define LSB_8B		9800
@@ -1669,9 +1579,6 @@ static void update_sram_data(struct fg_chip *chip, int *resched_ms)
 	u8 reg[4];
 	int64_t temp;
 	int battid_valid = fg_is_batt_id_valid(chip);
-
-	if(!sram_update_once)
-		sram_update_once = true;
 
 	fg_stay_awake(&chip->update_sram_wakeup_source);
 	if (chip->fg_restarting)
@@ -2308,11 +2215,6 @@ static enum power_supply_property fg_power_props[] = {
 	POWER_SUPPLY_PROP_VOLTAGE_MIN,
 #ifdef CONFIG_BATTERY_SH
 	POWER_SUPPLY_PROP_USB_ID_VOLTAGE,
-	POWER_SUPPLY_PROP_USB_ID_RESISTANCE,
-	POWER_SUPPLY_PROP_COLD_TEMP,
-	POWER_SUPPLY_PROP_HOT_TEMP,
-	POWER_SUPPLY_PROP_DIRECT_CURRENT,
-	POWER_SUPPLY_PROP_DIRECT_VOLTAGE,
 #endif /* CONFIG_BATTERY_SH */
 	POWER_SUPPLY_PROP_CYCLE_COUNT,
 	POWER_SUPPLY_PROP_CYCLE_COUNT_ID,
@@ -2401,25 +2303,6 @@ static int fg_power_get_property(struct power_supply *psy,
 #ifdef CONFIG_BATTERY_SH
 	case    POWER_SUPPLY_PROP_USB_ID_VOLTAGE:
 		val->intval = sh_get_usb_voltage(chip);
-		break;
-	case    POWER_SUPPLY_PROP_USB_ID_RESISTANCE:
-		val->intval = sh_get_usb_resistance(chip);
-		break;
-	case	POWER_SUPPLY_PROP_COLD_TEMP:
-		val->intval = get_prop_jeita_temp(chip, FG_MEM_HARD_COLD);
-		break;
-	case	POWER_SUPPLY_PROP_HOT_TEMP:
-		val->intval = get_prop_jeita_temp(chip, FG_MEM_HARD_HOT);
-		break;
-	case	POWER_SUPPLY_PROP_DIRECT_CURRENT:
-		/* Get shadow_current and shadow_voltage */
-		sh_get_direct_current_and_voltage();
-		val->intval = shadow_current;
-		break;
-	case	POWER_SUPPLY_PROP_DIRECT_VOLTAGE:
-		/* Only return last shadow_voltage
-		   Be careful to get shadow_current first and shadow_voltage next */
-		val->intval = shadow_voltage;
 		break;
 #endif /* CONFIG_BATTERY_SH */
 
@@ -3054,16 +2937,6 @@ static int fg_power_set_property(struct power_supply *psy,
 			rc = -EINVAL;
 		}
 		break;
-
-#ifdef CONFIG_BATTERY_SH
-	case POWER_SUPPLY_PROP_COLD_TEMP:
-		rc = set_prop_jeita_temp(chip, FG_MEM_HARD_COLD, val->intval);
-		break;
-	case POWER_SUPPLY_PROP_HOT_TEMP:
-		rc = set_prop_jeita_temp(chip, FG_MEM_HARD_HOT, val->intval);
-		break;
-#endif
-
 	default:
 		return -EINVAL;
 	};
@@ -3078,10 +2951,7 @@ static int fg_property_is_writeable(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_COOL_TEMP:
 	case POWER_SUPPLY_PROP_WARM_TEMP:
 	case POWER_SUPPLY_PROP_CYCLE_COUNT_ID:
-#ifdef CONFIG_BATTERY_SH
-	case POWER_SUPPLY_PROP_COLD_TEMP:
-	case POWER_SUPPLY_PROP_HOT_TEMP:
-#endif
+	case POWER_SUPPLY_PROP_UPDATE_NOW:
 		return 1;
 	default:
 		break;

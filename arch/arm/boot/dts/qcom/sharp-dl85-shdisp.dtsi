@@ -18,7 +18,6 @@
 #include "sharp-shdisp-dsi-panel-hayabusa-dual0-dl-1080p-video-fib.dtsi"
 #include "sharp-shdisp-dsi-panel-hayabusa-dual1-dl-1080p-video-fib.dtsi"
 #include "sharp-shdisp-hayabusa.dtsi"
-#include "sharp-shdisp-leds-gpio.dtsi"
 
 &mdss_mdp {
 		/delete-node/ qcom,mdss_dsi_sharp_wqxga_video_0;
@@ -46,7 +45,6 @@
 	};
 };
 
-// It is peculiar to a model and overwrites. 
 &soc {
 
 	sharp,shdisp_kerl {
@@ -102,7 +100,7 @@
 
 &mdss_dsi0 {
 	qcom,platform-strength-ctrl = [FF 06];
-	/delete-property/ qcom,dsi-pref-prim-pan;
+	qcom,dsi-pref-prim-pan=<&dsi_shdisp_hayabusa_dual0_cmd>;
 
 	pinctrl-names = "mdss_default", "mdss_sleep";
 	pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
@@ -123,7 +121,7 @@
 
 &mdss_dsi1 {
 	qcom,platform-strength-ctrl = [FF 06];
-	/delete-property/ qcom,dsi-pref-prim-pan;
+	qcom,dsi-pref-prim-pan=<&dsi_shdisp_hayabusa_dual1_cmd>;
 	/delete-property/ vdd-supply;
 
 	qcom,panel-supply-entries {
@@ -140,38 +138,11 @@
 };
 
 &spmi_bus{
-	qcom,pmi8994@3{
+    qcom,pmi8994@3{
 		qcom,leds@d000 {
-			status = "okay";
-			qcom,rgb_0 {
-				label = "rgb";
-				qcom,id = <3>;
-				qcom,mode = "pwm";
-				pwms = <&pmi8994_pwm_3 0 0>;
-				qcom,pwm-us = <1000>;
-				qcom,max-current = <12>;
-				qcom,source-sel = <1>;
-				qcom,lut-flags = <31>;
-				qcom,use-blink;
-				qcom,use-pierce;
-				qcom,pwm-channel = <2>;
-				qcom,start-idx = <1>;
-				qcom,pause-lo = <500>;
-				qcom,pause-hi = <500>;
-				qcom,ramp-step-ms = <120>;
-				qcom,duty-pcts = [00 00 00 00 00
-						00 00 00 00 00
-						50 00 00 00 00
-						00 00 00 00 00
-						00];
-				qcom,default-state = "off";
-				linux,name = "red";
-				linux,default-trigger = "none";
-			};
-			/delete-node/ qcom,rgb_1;
-			/delete-node/ qcom,rgb_2;
-		};
-	};
+            status = "disabled";
+        };
+    };
 };
 
 / {

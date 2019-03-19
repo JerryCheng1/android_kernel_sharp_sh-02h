@@ -596,7 +596,7 @@ static ssize_t force_ro_show(struct device *dev, struct device_attribute *attr,
 	if (!md)
 		return -EINVAL;
 
-	ret = snprintf(buf, PAGE_SIZE, "%d",
+	ret = snprintf(buf, PAGE_SIZE, "%d\n",
 		       get_disk_ro(dev_to_disk(dev)) ^
 		       md->read_only);
 	mmc_blk_put(md);
@@ -1061,6 +1061,9 @@ static int mmc_blk_ioctl_cmd(struct block_device *bdev,
 				mmc_hostname(card->host), __func__);
 #endif /* CONFIG_MMC_SD_ECO_MODE_CUST_SH */
 
+	if (mmc_card_get_bkops_en_manual(card))
+		mmc_stop_bkops(card);
+
 	err = mmc_blk_part_switch(card, md);
 	if (err)
 		goto cmd_rel_host;
@@ -1214,6 +1217,9 @@ static int mmc_blk_ioctl_rpmb_cmd(struct block_device *bdev,
 
 	mmc_rpm_hold(card->host, &card->dev);
 	mmc_claim_host(card->host);
+
+	if (mmc_card_get_bkops_en_manual(card))
+		mmc_stop_bkops(card);
 
 	err = mmc_blk_part_switch(card, md);
 	if (err)
@@ -1558,29 +1564,28 @@ static const struct mmc_protect_inf mmc_protect_part[] = {
 #ifdef CONFIG_RW_PROTECT_TYPE_EMMC_CUST_SH
 	{ 0,	                   MMC_PROTECT_WRITE	},
 	{ 5,	                   MMC_PROTECT_WRITE	},
-	{ 7,	                   MMC_PROTECT_WRITE	},
-	{ 8,	MMC_PROTECT_READ | MMC_PROTECT_WRITE	},
-	{ 9,	MMC_PROTECT_READ | MMC_PROTECT_WRITE	},
+	{ 9,	                   MMC_PROTECT_WRITE	},
 	{10,	MMC_PROTECT_READ | MMC_PROTECT_WRITE	},
 	{11,	MMC_PROTECT_READ | MMC_PROTECT_WRITE	},
 	{12,	MMC_PROTECT_READ | MMC_PROTECT_WRITE	},
 	{13,	MMC_PROTECT_READ | MMC_PROTECT_WRITE	},
-	{14,	                   MMC_PROTECT_WRITE	},
-	{15,	                   MMC_PROTECT_WRITE	},
+	{14,	MMC_PROTECT_READ | MMC_PROTECT_WRITE	},
+	{15,	MMC_PROTECT_READ | MMC_PROTECT_WRITE	},
 	{16,	                   MMC_PROTECT_WRITE	},
 	{17,	                   MMC_PROTECT_WRITE	},
 	{18,	                   MMC_PROTECT_WRITE	},
 	{19,	                   MMC_PROTECT_WRITE	},
 	{20,	                   MMC_PROTECT_WRITE	},
-	{21,	MMC_PROTECT_READ | MMC_PROTECT_WRITE	},
+	{21,	                   MMC_PROTECT_WRITE	},
 	{22,	                   MMC_PROTECT_WRITE	},
-	{23,	                   MMC_PROTECT_WRITE	},
-	{24,	MMC_PROTECT_READ | MMC_PROTECT_WRITE	},
-	{25,	MMC_PROTECT_READ | MMC_PROTECT_WRITE	},
+	{23,	MMC_PROTECT_READ | MMC_PROTECT_WRITE	},
+	{24,	                   MMC_PROTECT_WRITE	},
+	{25,	                   MMC_PROTECT_WRITE	},
+	{26,	MMC_PROTECT_READ | MMC_PROTECT_WRITE	},
 	{27,	MMC_PROTECT_READ | MMC_PROTECT_WRITE	},
-	{28,	MMC_PROTECT_READ | MMC_PROTECT_WRITE	},
+	{29,	MMC_PROTECT_READ | MMC_PROTECT_WRITE	},
+	{30,	MMC_PROTECT_READ | MMC_PROTECT_WRITE	},
 	{31,	                   MMC_PROTECT_WRITE	},
-	{32,	                   MMC_PROTECT_WRITE	},
 #else /* RW_PROTECT_TYPE_EMMC_CUST_SH */
 	{ 0,	                   MMC_PROTECT_WRITE	},
 	{ 5,	                   MMC_PROTECT_WRITE	},
@@ -1970,7 +1975,8 @@ int mmc_try_flush_cache(struct mmc_host *host, int type)
 				(R1_CURRENT_STATE(status) == R1_STATE_PRG));
 	}
 
-	err = mmc_cache_ctrl(host, 0);
+//	err = mmc_cache_ctrl(host, 0);
+	err = mmc_flush_cache(host->card);
 	if (err) {
 		pr_err("%s: %s: %d: Failed to flush cache\n",
 			mmc_hostname(host), __func__, __LINE__);
@@ -2041,6 +2047,18 @@ static inline void mmc_blk_reset_success(struct mmc_blk_data *md, int type)
 #ifdef CONFIG_ERR_RETRY_MMC_CUST_SH
 	mmc_blk_set_retry_cnt(md->queue.card, 0);
 #endif /* CONFIG_ERR_RETRY_MMC_CUST_SH */
+}
+
+int mmc_access_rpmb(struct mmc_queue *mq)
+{
+	struct mmc_blk_data *md = mq->data;
+	/*
+	 * If this is a RPMB partition access, return ture
+	 */
+	if (md && md->part_type == EXT_CSD_PART_CONFIG_ACC_RPMB)
+		return true;
+
+	return false;
 }
 
 static int mmc_blk_issue_discard_rq(struct mmc_queue *mq, struct request *req)

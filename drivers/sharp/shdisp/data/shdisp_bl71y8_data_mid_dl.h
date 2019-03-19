@@ -426,8 +426,8 @@ static const unsigned char shdisp_main_bkl_tbl[SHDISP_BKL_FIX_TBL_NUM] = {
     ,0x64
     ,0x65
     ,0x67
-    ,0x68
-    ,0x69
+    ,0x67
+    ,0x6A
     ,0x6B
     ,0x6C
     ,0x6D

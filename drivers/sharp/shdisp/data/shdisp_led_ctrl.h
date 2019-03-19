@@ -20,28 +20,18 @@
 /* ------------------------------------------------------------------------- */
 #include "shdisp_bl71y8_cmn.h"
 #if defined(SHDISP_MODEL_FS)
- #if defined(SHDISP_PA)
-#include "shdisp_bl71y8_led_fs_pa.h"
- #else /* SHDISP_PA */
 #include "shdisp_bl71y8_led_fs_dl.h"
- #endif /* SHDISP_PA */
 #elif defined(SHDISP_MODEL_MID)
- #if defined(SHDISP_PA)
-#include "shdisp_bl71y8_led_mid_pa.h"
- #elif  defined(SHDISP_DL)
-  #if defined(CONFIG_ARCH_LYNX_DL83) || defined(FEATURE_SH_MODEL_DL83)
-#include "shdisp_bl71y8_led_disney.h"
-  #else
 #include "shdisp_bl71y8_led_mid_dl.h"
-  #endif
- #elif  defined(SHDISP_AL)
-#include "shdisp_bl71y8_led_mid_al.h"
- #else /* SHDISP_PA SHDISP_DL */
-#include "shdisp_bl71y8_led_mid.h"
- #endif /* SHDISP_PA SHDISP_DL */
-#else /* SHDISP_MODEL_FS */
+#else
+ #if defined(SHDISP_DL)
+#include "shdisp_bl71y8_led_dl.h"
+ #elif defined(SHDISP_AL)
+#include "shdisp_bl71y8_led_al.h"
+ #else
 #include "shdisp_bl71y8_led_default.h"
-#endif /* SHDISP_MODEL_FS */
+ #endif /* SHDISP_DL SHDISP_AL */
+#endif /* SHDISP_MODEL_FS SHDISP_MODEL_MID */
 
 /* ------------------------------------------------------------------------- */
 /* VARIABLES                                                                 */
@@ -164,7 +154,7 @@ static const shdisp_bdicRegSetting_t shdisp_bdic_illumi_triple_color_1st[] = {
     ,{BDIC_REG_CH1_SET2,            SHDISP_BDIC_RMW,    0x17,                       0xF7,      0}
     ,{BDIC_REG_CH2_SET1,            SHDISP_BDIC_RMW,    0x02,                       0x6F,      0}
     ,{BDIC_REG_CH2_SET2,            SHDISP_BDIC_RMW,    0x17,                       0xF7,      0}
-    ,{BDIC_REG_TIMEER,              SHDISP_BDIC_RMW,    0x30,                       0xF0,      0}
+    ,{BDIC_REG_TIMEER,              SHDISP_BDIC_RMW,    0x31,                       0xF7,      0}
 };
 
 #ifdef SHDISP_EXTEND_COLOR_LED
@@ -276,7 +266,7 @@ static const shdisp_bdicRegSetting_t shdisp_bdic_illumi_triple_color_1st_twin[] 
     ,{BDIC_REG_CH4_SET2,            SHDISP_BDIC_RMW,    0x17,                       0xF7,      0}
     ,{BDIC_REG_CH5_SET1,            SHDISP_BDIC_RMW,    0x02,                       0x6F,      0}
     ,{BDIC_REG_CH5_SET2,            SHDISP_BDIC_RMW,    0x17,                       0xF7,      0}
-    ,{BDIC_REG_TIMER2,              SHDISP_BDIC_RMW,    0x30,                       0xF0,      0}
+    ,{BDIC_REG_TIMER2,              SHDISP_BDIC_RMW,    0x31,                       0xF7,      0}
 };
 #endif  /* SHDISP_COLOR_LED_TWIN */
 #endif  /* SHDISP_ANIME_COLOR_LED */

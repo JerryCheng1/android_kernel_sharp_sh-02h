@@ -12,7 +12,14 @@ mdss-mdp-objs += mdss_mdp_intf_video.o
 ifneq ($(CONFIG_ANDROID_ENGINEERING),y)
 EXTRA_CFLAGS += -DCONFIG_ANDROID_ENGINEERING
 endif
+ifeq ($(CONFIG_SHDISP_PANEL_HAYABUSA),y)
+SHDISP_DISABLE_HR_VIDEO=y
+endif
+ifneq ($(SHDISP_DISABLE_HR_VIDEO),y)
+mdss-mdp-objs += mdss_mdp_intf_hr_video.o
+else
 EXTRA_CFLAGS += -DSHDISP_DISABLE_HR_VIDEO
+endif
 mdss-mdp-objs += mdss_mdp_intf_cmd.o
 mdss-mdp-objs += mdss_mdp_intf_writeback.o
 mdss-mdp-objs += mdss_mdp_rotator.o

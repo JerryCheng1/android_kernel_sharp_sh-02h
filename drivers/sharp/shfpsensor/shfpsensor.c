@@ -15,6 +15,7 @@
 
 #include	<shfpsensor.h>
 #include	<linux/pm_qos.h>
+#include	<linux/wakelock.h>
 
 // #define VFSSPI_NOT_USE_COMPAT
 #define VFSSPI_NOT_USE_DYNAMIC_DEBUG
@@ -280,6 +281,8 @@ static unsigned long delay_time_on = POWER_ON_DELAY_MS;
 static unsigned long delay_time_off = POWER_OFF_DELAY_MS;
 
 static struct pm_qos_request fp_qos_cpu_dma_latency;
+
+static struct wake_lock shfp_wake_lock;
 
 #ifdef CONFIG_SENSORS_FPRINT_SYSFS
 static ssize_t fpsensor_check_show(struct device *dev, struct device_attribute *attr, char *buf)
@@ -1442,6 +1445,7 @@ long vfsspi_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 #ifdef CONFIG_SENSORS_FPRINT_PINCTRL
 		vfsspi_activate_pinctrl(vfsSpiDev);
 #endif	/* CONFIG_SENSORS_FPRINT_PINCTRL */
+		wake_lock(&shfp_wake_lock);
 		break;
 	}
 	case VFSSPI_IOCTL_POWER_OFF:
@@ -1454,6 +1458,7 @@ long vfsspi_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 #ifdef CONFIG_SENSORS_FPRINT_SPICLK
 		vfsspi_disable_spiclk(vfsSpiDev);
 #endif	/* CONFIG_SENSORS_FPRINT_SPICLK */
+		wake_unlock(&shfp_wake_lock);
 		break;
 	}
 	case VFSSPI_IOCTL_DISABLE_SPI_CLOCK:
@@ -2076,6 +2081,7 @@ int vfsspi_probe(struct spi_device *spi)
 
 	fp_qos_cpu_dma_latency.type = PM_QOS_REQ_ALL_CORES;
 	pm_qos_add_request(&fp_qos_cpu_dma_latency, PM_QOS_CPU_DMA_LATENCY, PM_QOS_DEFAULT_VALUE);
+	wake_lock_init(&shfp_wake_lock, WAKE_LOCK_SUSPEND, "shfp_wake_lock");
 
 	return status;
 }
@@ -2089,6 +2095,8 @@ int vfsspi_remove(struct spi_device *spi)
 	shfp_sensor_log(SHFPS_FLG_OTHER, "%s\n", __func__);
 
 	pm_qos_remove_request(&fp_qos_cpu_dma_latency);
+	wake_unlock(&shfp_wake_lock);
+	wake_lock_destroy(&shfp_wake_lock);
 
 	vfsSpiDev = spi_get_drvdata(spi);
 

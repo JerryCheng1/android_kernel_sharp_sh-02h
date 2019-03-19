@@ -69,6 +69,10 @@ enum usb_type_detection_err_wa_status {
 };
 #endif /* CONFIG_BATTERY_SH */
 
+#ifdef CONFIG_BATTERY_SH
+static struct wake_lock smb_timeout_wake_lock;
+#endif /* CONFIG_BATTERY_SH */
+
 #define DISABLE_HVDCP_9V
 
 /* Config registers */
@@ -293,7 +297,7 @@ struct smbchg_chip {
 	struct delayed_work		vbus_osc_wa_return_check_work;
 	int						usb_type;
 	enum usb_type_detection_err_wa_status	usb_type_detection_status;
-#endif
+#endif /* CONFIG_BATTERY_SH */
 
 	struct mutex			usb_status_lock;
 };
@@ -353,11 +357,9 @@ enum wake_reason {
 static struct smbchg_chip *the_chip;
 #endif /* CONFIG_BATTERY_SH */
 
-/* [PMIC/BATT][#37322]2015.03.06 ADD-START */
 #ifdef CONFIG_BATTERY_SH
 static struct spmi_device *the_pm8994_spmi = NULL;
 #endif /* CONFIG_BATTERY_SH */
-/* [PMIC/BATT][#37322]2015.03.06 ADD-END */
 
 #ifdef CONFIG_BATTERY_SH
 static struct clk *bbclk2 = NULL;
@@ -4009,11 +4011,14 @@ static void check_battery_type(struct smbchg_chip *chip)
 #define USB_TYPE_DETECTION_ERR_DELAY 5000
 static int smbchg_usb_type_detection_err_wa_en = 1;
 module_param_named(
-	usb_type_detection_err_wa_en, smbchg_usb_type_detection_err_wa_en, int, S_IRUSR | S_IWUSR
+	usb_type_detection_err_wa_en,
+	smbchg_usb_type_detection_err_wa_en, int, S_IRUSR | S_IWUSR
 );
-static int smbchg_usb_type_detection_err_wa_delay = USB_TYPE_DETECTION_ERR_DELAY;
+static int smbchg_usb_type_detection_err_wa_delay
+	= USB_TYPE_DETECTION_ERR_DELAY;
 module_param_named(
-	usb_type_detection_err_wa_delay, smbchg_usb_type_detection_err_wa_delay, int, S_IRUSR | S_IWUSR
+	usb_type_detection_err_wa_delay,
+	smbchg_usb_type_detection_err_wa_delay, int, S_IRUSR | S_IWUSR
 );
 #endif	/* CONFIG_BATTERY_SH */
 
@@ -4071,15 +4076,15 @@ static void smbchg_external_power_changed(struct power_supply *psy)
 	read_usb_type(chip, &usb_type_name, &usb_supply_type);
 
 #ifdef CONFIG_BATTERY_SH
-	if(smbchg_usb_type_detection_err_wa_en) {
-		if(chip->usb_type_detection_status == UDE_NOTRY) {
-			if(usb_supply_type == POWER_SUPPLY_TYPE_USB && current_limit == USB_TYPE_DETECTION_ERR_CURRENT_LIMIT) {
-
+	if (smbchg_usb_type_detection_err_wa_en) {
+		if (chip->usb_type_detection_status == UDE_NOTRY) {
+			if (usb_supply_type == POWER_SUPPLY_TYPE_USB &&
+				current_limit == USB_TYPE_DETECTION_ERR_CURRENT_LIMIT) {
 				msleep(smbchg_usb_type_detection_err_wa_delay);
-
-				if(is_usb_present(chip)) {
+				if (is_usb_present(chip)) {
 					chip->usb_type_detection_status = UDE_TRY;
-					pr_smb(PR_MISC, "UDE status=%d\n", chip->usb_type_detection_status);
+					pr_smb(PR_MISC, "UDE status=%d\n",
+						chip->usb_type_detection_status);
 					smbchg_usb_type_detection_err_wa(chip);
 				}
 			}
@@ -4783,6 +4788,7 @@ static void handle_usb_removal(struct smbchg_chip *chip)
 	if (wake_lock_active(&chip->batt_charge_wake_lock)) {
 		wake_unlock(&chip->batt_charge_wake_lock);
 	}
+	wake_lock_timeout(&smb_timeout_wake_lock, 1 * HZ);
 #endif /* CONFIG_BATTERY_SH */
 }
 
@@ -4908,6 +4914,7 @@ static void handle_usb_insertion(struct smbchg_chip *chip)
 
 #ifdef CONFIG_BATTERY_SH
 	wake_lock(&chip->batt_charge_wake_lock);
+	wake_lock_timeout(&smb_timeout_wake_lock, 1 * HZ);
 #endif /* CONFIG_BATTERY_SH */
 }
 
@@ -7333,7 +7340,6 @@ int smbchg_bbclk2_control_enable(bool enable)
 EXPORT_SYMBOL(smbchg_bbclk2_control_enable);
 #endif /* CONFIG_BATTERY_SH */
 
-/* [PMIC/BATT][#37322]2015.03.06 ADD-START */
 #ifdef CONFIG_BATTERY_SH
 #define PON_PBL_STATUS	0x807
 int smbchg_get_pon_pbl_status(shbatt_pon_pbl_status_t* pon_pbl_status)
@@ -7435,12 +7441,9 @@ static void smbchg_usb_type_detection_err_wa(struct smbchg_chip *chip)
 	smbchg_sec_masked_write(chip,
 			chip->usb_chgpth_base + USBIN_CHGR_CFG,
 			ADAPTER_ALLOWANCE_MASK, chip->original_usbin_allowance);
-	
 	return;
 }
-
 #endif /* CONFIG_BATTERY_SH */
-/* [PMIC/BATT][#37322]2015.03.06 ADD-END */
 
 static int create_debugfs_entries(struct smbchg_chip *chip)
 {
@@ -7584,7 +7587,6 @@ static int smbchg_probe(struct spmi_device *spmi)
 	struct power_supply *usb_psy;
 	struct qpnp_vadc_chip *vadc_dev;
 
-/* [PMIC/BATT][#37322]2015.03.06 ADD-START */
 #ifdef CONFIG_BATTERY_SH
 	if (of_find_property(spmi->dev.of_node, "qcom,pm8994-spmi", NULL)) {
 		pr_smb(PR_STATUS, "Get the pm8994-spmi\n");
@@ -7592,7 +7594,6 @@ static int smbchg_probe(struct spmi_device *spmi)
 		return 0;
 	}
 #endif /* CONFIG_BATTERY_SH */
-/* [PMIC/BATT][#37322]2015.03.06 ADD-END */
 
 	usb_psy = power_supply_get_by_name("usb");
 	if (!usb_psy) {
@@ -7684,6 +7685,7 @@ static int smbchg_probe(struct spmi_device *spmi)
 #ifdef CONFIG_BATTERY_SH
 	wake_lock_init(&chip->batt_charge_wake_lock, WAKE_LOCK_SUSPEND,
 			"batt_charge_wake_lock");
+	wake_lock_init(&smb_timeout_wake_lock, WAKE_LOCK_SUSPEND, "smb_timeout_wake_lock");
 #endif /* CONFIG_BATTERY_SH */
 
 	rc = determine_initial_status(chip);
@@ -7816,6 +7818,8 @@ static int smbchg_remove(struct spmi_device *spmi)
 #ifdef CONFIG_BATTERY_SH
 	clk_put(bbclk2);
 	bbclk2 = NULL;
+	wake_unlock(&smb_timeout_wake_lock);
+	wake_lock_destroy(&smb_timeout_wake_lock);
 #endif /* CONFIG_BATTERY_SH */
 
 	return 0;

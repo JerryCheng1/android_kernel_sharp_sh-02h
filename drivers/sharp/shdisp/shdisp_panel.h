@@ -118,12 +118,8 @@ int shdisp_panel_API_dsi_write_reg(struct shdisp_dsi_cmd_req *req);
 int shdisp_panel_API_dsi_read_reg(struct shdisp_dsi_cmd_req *req);
 
 #if defined(CONFIG_SHDISP_PANEL_ANDY)
-int shdisp_andy_API_set_freq_param(void *freq);
 int shdisp_andy_API_vcom_tracking(int tracking);
 int shdisp_andy_API_vcom_is_adjusted(void);
-#elif defined(CONFIG_SHDISP_PANEL_HAYABUSA)
-int shdisp_hayabusa_API_vcom_tracking(int tracking);
-int shdisp_hayabusa_API_vcom_is_adjusted(void);
 #elif defined(CONFIG_SHDISP_PANEL_ARIA)
 int shdisp_aria_API_set_freq_param(void *freq);
 #endif /* CONFIG_SHDISP_PANEL_ANDY */

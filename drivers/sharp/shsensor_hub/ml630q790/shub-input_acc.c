@@ -82,6 +82,9 @@ static void shub_set_sensor_poll(int32_t en);
 static void shub_set_abs_params(void);
 static int32_t currentActive;
 
+static int32_t input_acc[INDEX_SUM]= {0}; /* SHMDS_HUB_0321_01 add */
+static bool input_flg = false; /* SHMDS_HUB_0321_01 add */
+
 static struct hrtimer poll_timer;
 extern int32_t setMaxBatchReportLatency(uint32_t sensor, int64_t latency);
 
@@ -89,6 +92,7 @@ static long shub_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
     void __user *argp = (void __user *)arg;
     int32_t ret = -1, tmpval = 0;
+    int32_t xyz[INDEX_SUM]= {0}; /* SHMDS_HUB_0311_03 add */
     switch (cmd) {
         case SHUBIO_SET_ACC_ACTIVATE:
             ret = copy_from_user(&tmpval, argp, sizeof(tmpval));
@@ -260,8 +264,15 @@ static long shub_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
                 DBG_ACC_IO("ioctl(cmd = Flush)\n"); // SHMDS_HUB_0701_01 add
                 mutex_lock(&shub_lock);
                 if(power_state != 0){
-                    shub_logging_flush();
-                    setMaxBatchReportLatency(SHUB_ACTIVE_SENSOR, batch_param.m_Latency);
+/* SHMDS_HUB_0311_03 mod S */
+                    if(batch_param.m_Latency > 0){
+                        shub_logging_flush();
+                        setMaxBatchReportLatency(SHUB_ACTIVE_SENSOR, batch_param.m_Latency);
+                    }else{
+                        shub_get_sensors_data(SHUB_ACTIVE_SENSOR, xyz);
+                        shub_input_report_acc(xyz);
+                    }
+/* SHMDS_HUB_0311_03 mod E */
                     shub_input_sync_init(shub_idev); /* SHMDS_HUB_0602_01 mod */
 // SHMDS_HUB_0309_01 mod S
 //                  input_event(shub_idev, EV_SYN, SYN_REPORT, 2);
@@ -340,6 +351,16 @@ static long shub_ioctl_wrapper(struct file *filp, unsigned int cmd, unsigned lon
     return ret;
 }
 // SHMDS_HUB_1101_01 add E
+/* SHMDS_HUB_0321_01 add S */
+static struct timespec shub_local_ts;
+static struct timespec shub_get_timestamp(void)
+{
+    struct timespec ts;
+    ktime_get_ts(&ts);
+    monotonic_to_bootbased(&ts);
+    return ts;
+}
+/* SHMDS_HUB_0321_01 add E */
 
 static void shub_sensor_poll_work_func(struct work_struct *work)
 {
@@ -348,7 +369,13 @@ static void shub_sensor_poll_work_func(struct work_struct *work)
         mutex_lock(&shub_lock);
         shub_qos_start();    // SHMDS_HUB_1101_01 add
         shub_get_sensors_data(SHUB_ACTIVE_SENSOR, xyz);
-        shub_input_report_acc(xyz);
+/* SHMDS_HUB_0321_01 add S */
+        input_acc[0] = xyz[0];
+        input_acc[1] = xyz[1];
+        input_acc[2] = xyz[2];
+//      shub_input_report_acc(xyz);
+        input_flg = true;
+/* SHMDS_HUB_0321_01 add E */
         shub_qos_end();      // SHMDS_HUB_1101_01 add
         mutex_unlock(&shub_lock);
     }
@@ -357,6 +384,16 @@ static void shub_sensor_poll_work_func(struct work_struct *work)
 static enum hrtimer_restart shub_sensor_poll(struct hrtimer *tm)
 {
     schedule_work(&sensor_poll_work);
+/* SHMDS_HUB_0321_01 add S */
+    shub_local_ts = shub_get_timestamp();
+    if(input_flg){
+        input_acc[3] = shub_local_ts.tv_sec;
+        input_acc[4] = shub_local_ts.tv_nsec;
+        shub_input_report_acc(input_acc);
+    }else{
+        DBG_ACC_DATA("not report\n");
+    }
+/* SHMDS_HUB_0321_01 add E */
     hrtimer_forward_now(&poll_timer, ns_to_ktime((int64_t)delay * NSEC_PER_MSEC));
     return HRTIMER_RESTART;
 }
@@ -414,6 +451,7 @@ static void shub_set_sensor_poll(int32_t en)
 {
     hrtimer_cancel(&poll_timer);
     if(en){
+        input_flg = false; /* SHMDS_HUB_0321_01 add */
         hrtimer_start(&poll_timer, ns_to_ktime((int64_t)delay * NSEC_PER_MSEC), HRTIMER_MODE_REL);
     }
 }

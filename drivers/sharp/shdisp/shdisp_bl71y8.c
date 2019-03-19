@@ -82,6 +82,18 @@
 #define SHDISP_BDIC_AVE_ADO_READ_TIMES          (5)
 #define SHDISP_BDIC_INVALID_ADO                 (-1)
 #define SHDISP_BDIC_INVALID_RANGE               (-1)
+
+#ifdef SHDISP_BDIC_PROHIBIT
+#define PSALS_CORRECT_PROH_HIGH_VAL(val) \
+            if ((val==0x068) || (val==0x69)) { \
+                val = 0x6A; \
+            }
+#define PSALS_CORRECT_PROH_LOW_VAL(val) \
+            if ((val==0x068) || (val==0x69)) { \
+                val = 0x67; \
+            }
+#endif /* SHDISP_BDIC_PROHIBIT */
+
 /* ------------------------------------------------------------------------- */
 /* TYPES                                                                     */
 /* ------------------------------------------------------------------------- */
@@ -106,8 +118,8 @@ static void shdisp_bdic_LD_GPIO_control(unsigned char symbol, unsigned char stat
 static void shdisp_bdic_seq_backlight_off(void);
 static void shdisp_bdic_seq_backlight_fix_on(int param);
 static void shdisp_bdic_seq_backlight_auto_on(int param);
-static int  shdisp_bdic_LD_PHOTO_SENSOR_get_lux(unsigned short *ado, unsigned int *lux, unsigned short *clear, unsigned short *ir);
-static int  shdisp_bdic_LD_PHOTO_SENSOR_get_raw_als(unsigned short *clear, unsigned short *ir);
+static int shdisp_bdic_LD_PHOTO_SENSOR_get_lux(unsigned short *ado, unsigned int *lux, unsigned short *clear, unsigned short *ir);
+static int shdisp_bdic_LD_PHOTO_SENSOR_get_raw_als(unsigned short *clear, unsigned short *ir);
 #ifdef SHDISP_ALS_INT
 static int shdisp_bdic_LD_PHOTO_SENSOR_set_alsint(struct shdisp_photo_sensor_int_trigger *value);
 static int shdisp_bdic_LD_PHOTO_SENSOR_get_alsint(struct shdisp_photo_sensor_int_trigger *value);
@@ -135,8 +147,8 @@ static void shdisp_bdic_PD_LCD_POS_PWR_on(void);
 static void shdisp_bdic_PD_LCD_POS_PWR_off(void);
 static void shdisp_bdic_PD_LCD_NEG_PWR_on(void);
 static void shdisp_bdic_PD_LCD_NEG_PWR_off(void);
-static int  shdisp_bdic_seq_backup_bdic_regs(shdisp_bdicRegSetting_t *regs, int size);
-static int  shdisp_bdic_seq_backup_als_regs(shdisp_bdicRegSetting_t *regs, int size);
+static int shdisp_bdic_seq_backup_bdic_regs(shdisp_bdicRegSetting_t *regs, int size);
+static int shdisp_bdic_seq_backup_als_regs(shdisp_bdicRegSetting_t *regs, int size);
 static void shdisp_bdic_PD_BKL_control(unsigned char request, int param);
 static void shdisp_bdic_PD_GPIO_control(unsigned char port, unsigned char status);
 static unsigned char shdisp_bdic_PD_opt_th_shift(int index);
@@ -145,19 +157,19 @@ static void shdisp_bdic_PD_BKL_set_led_value(void);
 static void shdisp_bdic_PD_BKL_set_opt_value(void);
 static int shdisp_bdic_PD_get_sensor_state(void);
 static int shdisp_bdic_PD_wait4i2ctimer_stop(void);
-static int  shdisp_bdic_PD_psals_power_on(void);
-static int  shdisp_bdic_PD_psals_power_off(void);
-static int  shdisp_bdic_PD_psals_ps_init_als_off(void);
-static int  shdisp_bdic_PD_psals_ps_init_als_on(void);
-static int  shdisp_bdic_PD_psals_ps_deinit_als_off(void);
-static int  shdisp_bdic_PD_psals_ps_deinit_als_on(void);
-static int  shdisp_bdic_PD_psals_als_init_ps_off(void);
-static int  shdisp_bdic_PD_psals_als_init_ps_on(void);
-static int  shdisp_bdic_PD_psals_als_deinit_ps_off(void);
-static int  shdisp_bdic_PD_psals_als_deinit_ps_on(void);
-static int  shdisp_bdic_PD_get_ave_ado(struct shdisp_ave_ado *ave_ado);
+static int shdisp_bdic_PD_psals_power_on(void);
+static int shdisp_bdic_PD_psals_power_off(void);
+static int shdisp_bdic_PD_psals_ps_init_als_off(void);
+static int shdisp_bdic_PD_psals_ps_init_als_on(void);
+static int shdisp_bdic_PD_psals_ps_deinit_als_off(void);
+static int shdisp_bdic_PD_psals_ps_deinit_als_on(void);
+static int shdisp_bdic_PD_psals_als_init_ps_off(void);
+static int shdisp_bdic_PD_psals_als_init_ps_on(void);
+static int shdisp_bdic_PD_psals_als_deinit_ps_off(void);
+static int shdisp_bdic_PD_psals_als_deinit_ps_on(void);
+static int shdisp_bdic_PD_get_ave_ado(struct shdisp_ave_ado *ave_ado);
 
-static int  shdisp_bdic_PD_REG_ADO_get_opt(unsigned short *ado, unsigned short *clear, unsigned short *ir);
+static int shdisp_bdic_PD_REG_ADO_get_opt(unsigned short *ado, unsigned short *clear, unsigned short *ir);
 static int shdisp_bdic_PD_REG_RAW_DATA_get_opt(unsigned short *clear, unsigned short *ir);
 #ifdef SHDISP_ALS_INT
 static int shdisp_bdic_PD_REG_int_setting(struct shdisp_photo_sensor_int_trigger *trigger);
@@ -977,7 +989,7 @@ void shdisp_bdic_API_IRQ_save_fac(void)
     shdisp_bdic_API_IO_read_reg(BDIC_REG_GFAC4, &value3);
     SHDISP_DEBUG("GFAC4=%02x GFAC3=%02x GFAC1=%02x", value3, value2, value1);
 
-    shdisp_bdic_irq_fac = (unsigned int)value1 | ((unsigned int)value2 << 8 ) | ((unsigned int)value3 << 16);
+    shdisp_bdic_irq_fac = (unsigned int)value1 | ((unsigned int)value2 << 8) | ((unsigned int)value3 << 16);
 
     if (shdisp_bdic_irq_fac & SHDISP_BDIC_INT_GFAC_DET) {
         shdisp_bdic_API_IO_clr_bit_reg(BDIC_REG_GIMF4, 0x04);
@@ -994,7 +1006,7 @@ void shdisp_bdic_API_IRQ_save_fac(void)
 
     if (shdisp_bdic_irq_fac & SHDISP_BDIC_INT_GFAC_I2C_ERR) {
         shdisp_bdic_API_IO_clr_bit_reg(BDIC_REG_GIMR4, 0x08);
-        SHDISP_ERR("ps_als error : INT_I2C_ERR_REQ(GFAC4[3]) detect" );
+        SHDISP_ERR("ps_als error : INT_I2C_ERR_REQ(GFAC4[3]) detect");
 #ifdef SHDISP_RESET_LOG
         err_code.mode = SHDISP_DBG_MODE_LINUX;
         err_code.type = SHDISP_DBG_TYPE_PSALS;
@@ -1135,8 +1147,8 @@ void shdisp_bdic_API_IRQ_Clear(void)
     }
 
     out1 = (unsigned char)(shdisp_bdic_irq_fac & 0x000000FF);
-    out2 = (unsigned char)((shdisp_bdic_irq_fac >> 8 ) & 0x000000FF);
-    out3 = (unsigned char)((shdisp_bdic_irq_fac >> 16 ) & 0x000000FF);
+    out2 = (unsigned char)((shdisp_bdic_irq_fac >>  8) & 0x000000FF);
+    out3 = (unsigned char)((shdisp_bdic_irq_fac >> 16) & 0x000000FF);
 
     shdisp_bdic_API_IO_write_reg(BDIC_REG_GSCR1, out1);
     shdisp_bdic_API_IO_write_reg(BDIC_REG_GSCR3, out2);
@@ -1266,8 +1278,8 @@ void shdisp_bdic_API_IRQ_dbg_Clear_All(void)
     unsigned char out1, out2, out3;
 
     out1 = (unsigned char)(SHDISP_INT_ENABLE_GFAC & 0x000000FF);
-    out2 = (unsigned char)((SHDISP_INT_ENABLE_GFAC >> 8 ) & 0x000000FF);
-    out3 = (unsigned char)((SHDISP_INT_ENABLE_GFAC >> 16 ) & 0x000000FF);
+    out2 = (unsigned char)((SHDISP_INT_ENABLE_GFAC >>  8) & 0x000000FF);
+    out3 = (unsigned char)((SHDISP_INT_ENABLE_GFAC >> 16) & 0x000000FF);
 
     shdisp_bdic_API_IO_write_reg(BDIC_REG_GSCR1, out1);
     shdisp_bdic_API_IO_write_reg(BDIC_REG_GSCR3, out2);
@@ -1793,7 +1805,7 @@ static int shdisp_bdic_LD_PHOTO_SENSOR_get_lightinfo(struct shdisp_light_info *v
         SHDISP_DEBUG("[caution]clear is zero");
         value->clear_ir_rate = 0;
     } else {
-        value->clear_ir_rate = (((unsigned int)ir * 1000) / (unsigned int)clear + 5 ) / 10;
+        value->clear_ir_rate = (((unsigned int)ir * 1000) / (unsigned int)clear + 5) / 10;
     }
     shdisp_bdic_API_IO_bank_set(0x00);
     shdisp_bdic_API_IO_read_reg(BDIC_REG_ADO_INDEX, &level);
@@ -2290,6 +2302,12 @@ static void shdisp_bdic_PD_BKL_control(unsigned char request, int param)
             ret = shdisp_bdic_API_IO_read_reg(BDIC_REG_GINF3, &val);
             SHDISP_DEBUG("DCDC1 Err Chk. ret=%d. val=0x%02x", ret, val);
             if (ret == SHDISP_RESULT_SUCCESS) {
+#if defined(CONFIG_ANDROID_ENGINEERING)
+                if (shdisp_dbg_API_get_recovery_check_error() == SHDISP_DBG_BDIC_ERROR_DCDC1) {
+                    val = val | SHDISP_BDIC_GINF3_DCDC1_OVD;
+                    SHDISP_DEBUG("DEBUG DCDC1 Err set. val=0x%02x", val);
+                }
+#endif /* defined (CONFIG_ANDROID_ENGINEERING) */
                 if ((val & SHDISP_BDIC_GINF3_DCDC1_OVD) == SHDISP_BDIC_GINF3_DCDC1_OVD) {
                     SHDISP_ERR("DCDC1_OVD bit ON.");
                     SHDISP_BDIC_REGSET(shdisp_bdic_dcdc1_err);
@@ -2435,8 +2453,8 @@ static void shdisp_bdic_PD_BKL_control(unsigned char request, int param)
 /* ------------------------------------------------------------------------- */
 static void shdisp_bdic_PD_GPIO_control(unsigned char port, unsigned char status)
 {
-    unsigned char    reg;
-    unsigned char    bit;
+    unsigned char reg;
+    unsigned char bit;
 
     switch (port) {
     case SHDISP_BDIC_GPIO_GPOD0:
@@ -2548,8 +2566,8 @@ static void shdisp_bdic_PD_BKL_set_led_value(void)
 
     switch (shdisp_bdic_bkl_mode) {
     case SHDISP_BDIC_BKL_MODE_FIX:
-        shdisp_bdic_LD_LCD_BKL_get_fix_param(mode, shdisp_bdic_bkl_param, &shdisp_bdic_bkl_led_value[0].data );
-        shdisp_bdic_LD_LCD_BKL_get_fix_param(mode, shdisp_bdic_bkl_param, &shdisp_bdic_bkl_led_value[1].data );
+        shdisp_bdic_LD_LCD_BKL_get_fix_param(mode, shdisp_bdic_bkl_param, &shdisp_bdic_bkl_led_value[0].data);
+        shdisp_bdic_LD_LCD_BKL_get_fix_param(mode, shdisp_bdic_bkl_param, &shdisp_bdic_bkl_led_value[1].data);
         if (shdisp_bdic_bkl_before_mode != SHDISP_BDIC_BKL_MODE_FIX) {
             slope_mode = SHDISP_BDIC_BKL_SLOPE_MODE_NONE;
         } else {
@@ -2749,8 +2767,12 @@ static void shdisp_bdic_LD_LCD_BKL_get_pwm_param(int mode, int level, unsigned c
 
     pwm_val *= (unsigned char)SHDISP_BKL_CURRENT_UPPER_LIMIT;
     pwm_val /= (unsigned short)SHDISP_BKL_PWM_UPPER_LIMIT;
+#ifdef SHDISP_BDIC_PROHIBIT
+    *opt_val = shdisp_bdic_API_correct_proh_val((unsigned char)pwm_val);
+#else /* SHDISP_BDIC_PROHIBIT */
     *opt_val = (unsigned char)pwm_val;
-    SHDISP_INFO("mode=%d, param=%d, pwm=0x%2lX", mode, bkl_param_auto, pwm_val);
+#endif /* SHDISP_BDIC_PROHIBIT */
+    SHDISP_INFO("mode=%d, param=%d, pwm=0x%2lX, opt_val=0x%2X", mode, bkl_param_auto, pwm_val, *opt_val);
     return;
 }
 
@@ -3186,13 +3208,33 @@ static int shdisp_bdic_PD_psals_als_deinit_ps_on(void)
 /* ------------------------------------------------------------------------- */
 static int shdisp_bdic_PD_psals_write_threshold(struct shdisp_prox_params *prox_params)
 {
+    unsigned char temp_low[2];
+    unsigned char temp_high[2];
     if (!prox_params) {
         return SHDISP_RESULT_FAILURE;
     }
-    shdisp_bdic_ps_init_set_threshold[0].data = (unsigned char)(prox_params->threshold_low & 0x00FF);
-    shdisp_bdic_ps_init_set_threshold[1].data = (unsigned char)((prox_params->threshold_low >> 8) & 0x00FF);
-    shdisp_bdic_ps_init_set_threshold[2].data = (unsigned char)(prox_params->threshold_high & 0x00FF);
-    shdisp_bdic_ps_init_set_threshold[3].data = (unsigned char)((prox_params->threshold_high >> 8) & 0x00FF);
+    temp_low[0] = (unsigned char)(prox_params->threshold_low & 0x00FF);
+    temp_low[1] = (unsigned char)((prox_params->threshold_low >> 8) & 0x00FF);
+    temp_high[0] = (unsigned char)(prox_params->threshold_high & 0x00FF);
+    temp_high[1] = (unsigned char)((prox_params->threshold_high >> 8) & 0x00FF);
+#ifdef SHDISP_BDIC_PROHIBIT
+    SHDISP_DEBUG("prox_pramams from: low = 0x%02x, 0x%02x: high = 0x%02x, 0x%02x", 
+            temp_low[0], temp_low[1], temp_high[0], temp_high[1]);
+
+    PSALS_CORRECT_PROH_LOW_VAL(temp_low[0])
+    PSALS_CORRECT_PROH_LOW_VAL(temp_low[1])
+    PSALS_CORRECT_PROH_HIGH_VAL(temp_high[0])
+    PSALS_CORRECT_PROH_HIGH_VAL(temp_high[1])
+#endif /* SHDISP_BDIC_PROHIBIT */
+
+    shdisp_bdic_ps_init_set_threshold[0].data = temp_low[0];
+    shdisp_bdic_ps_init_set_threshold[1].data = temp_low[1];
+    shdisp_bdic_ps_init_set_threshold[2].data = temp_high[0];
+    shdisp_bdic_ps_init_set_threshold[3].data = temp_high[1];
+
+    SHDISP_DEBUG("prox_pramams to  : low = 0x%02x, 0x%02x: high = 0x%02x, 0x%02x", 
+            temp_low[0], temp_low[1], temp_high[0], temp_high[1]);
+
     return SHDISP_RESULT_SUCCESS;
 }
 
@@ -3203,7 +3245,7 @@ static int shdisp_bdic_PD_REG_ADO_get_opt(unsigned short *ado, unsigned short *c
 {
     int ret, shift_tmp;
     unsigned long ado0, ado1;
-    unsigned short als0, als1;
+    unsigned long als0, als1;
     unsigned short alpha, beta, gmm;
     unsigned char rval[(SENSOR_REG_D1_MSB + 1) - SENSOR_REG_D0_LSB];
     signed char range0, res;
@@ -3248,7 +3290,7 @@ static int shdisp_bdic_PD_REG_ADO_get_opt(unsigned short *ado, unsigned short *c
     }
     als0 = (rval[1] << 8 | rval[0]);
     als1 = (rval[3] << 8 | rval[2]);
-    SHDISP_DEBUG("als1*16=%d, als0*15=%d", als1 * SHDISP_BDIC_RATIO_OF_ALS0, als0 * SHDISP_BDIC_RATIO_OF_ALS1);
+    SHDISP_DEBUG("als1*16=%ld, als0*15=%ld", als1 * SHDISP_BDIC_RATIO_OF_ALS0, als0 * SHDISP_BDIC_RATIO_OF_ALS1);
 
     if ((als1 * SHDISP_BDIC_RATIO_OF_ALS0) > (als0 * SHDISP_BDIC_RATIO_OF_ALS1)) {
         alpha = s_state_str.photo_sensor_adj.als_adjust[1].als_adj0;
@@ -3257,9 +3299,9 @@ static int shdisp_bdic_PD_REG_ADO_get_opt(unsigned short *ado, unsigned short *c
         if (gmm < 16) {
             ado0 = (((als0 * alpha) - (als1 * beta)) << gmm) >> 15;
         } else {
-            ado0 = (((als0 * alpha) - (als1 * beta)) << (32-gmm)) >> 15;
+            ado0 = (((als0 * alpha) - (als1 * beta)) >> (32 - gmm)) >> 15;
         }
-        SHDISP_DEBUG("ROUTE-1 als0=%04X, als1=%04X, alpha=%04X, gmm=%02x", als0, als1, alpha, gmm);
+        SHDISP_DEBUG("ROUTE-1 als0=%04lX, als1=%04lX, alpha=%04X, beta=%04X, gmm=%02x, ado0=%08lx", als0, als1, alpha, beta, gmm, ado0);
     } else {
         alpha = s_state_str.photo_sensor_adj.als_adjust[0].als_adj0;
         beta  = s_state_str.photo_sensor_adj.als_adjust[0].als_adj1;
@@ -3267,10 +3309,9 @@ static int shdisp_bdic_PD_REG_ADO_get_opt(unsigned short *ado, unsigned short *c
         if (gmm < 16) {
             ado0 = (((als0 * alpha) - (als1 * beta)) << gmm) >> 15;
         } else {
-            ado0 = (((als0 * alpha) - (als1 * beta)) << (32-gmm)) >> 15;
+            ado0 = (((als0 * alpha) - (als1 * beta)) >> (32 - gmm)) >> 15;
         }
-        SHDISP_DEBUG("ROUTE-2 als0=%04X, als1=%04X, alpha=%04X, beta=%04X, gmm=%02x", als0, als1,
-                                                                                        alpha, beta, gmm);
+        SHDISP_DEBUG("ROUTE-2 als0=%04lX, als1=%04lX, alpha=%04X, beta=%04X, gmm=%02x, ado0=%08lx", als0, als1, alpha, beta, gmm, ado0);
     }
 
     if (res < 3) {
@@ -3282,7 +3323,7 @@ static int shdisp_bdic_PD_REG_ADO_get_opt(unsigned short *ado, unsigned short *c
     if (shift_tmp < 0) {
         shift_tmp = (-1) * shift_tmp;
         ado1 = ado0 >> shift_tmp;
-    }else{
+    } else {
         ado1 = ado0 << shift_tmp;
     }
 
@@ -3293,10 +3334,10 @@ static int shdisp_bdic_PD_REG_ADO_get_opt(unsigned short *ado, unsigned short *c
         *ado = (unsigned short)ado1;
     }
     if (clear) {
-        *clear = als0;
+        *clear = (unsigned short)als0;
     }
     if (ir) {
-        *ir = als1;
+        *ir = (unsigned short)als1;
     }
 
     SHDISP_BDIC_REGSET(shdisp_bdic_reg_ar_ctrl);

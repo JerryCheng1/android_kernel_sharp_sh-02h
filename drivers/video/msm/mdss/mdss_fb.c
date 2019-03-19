@@ -1166,6 +1166,7 @@ static int mdss_fb_remove(struct platform_device *pdev)
 static int mdss_fb_send_panel_event(struct msm_fb_data_type *mfd,
 					int event, void *arg)
 {
+	int ret = 0;
 	struct mdss_panel_data *pdata;
 
 	pdata = dev_get_platdata(&mfd->pdev->dev);
@@ -1176,10 +1177,14 @@ static int mdss_fb_send_panel_event(struct msm_fb_data_type *mfd,
 
 	pr_debug("sending event=%d for fb%d\n", event, mfd->index);
 
-	if (pdata->event_handler)
-		return pdata->event_handler(pdata, event, arg);
+	do {
+		if (pdata->event_handler)
+			ret = pdata->event_handler(pdata, event, arg);
 
-	return 0;
+		pdata = pdata->next;
+	} while (!ret && pdata);
+
+	return ret;
 }
 
 static int mdss_fb_suspend_sub(struct msm_fb_data_type *mfd)
@@ -3225,7 +3230,11 @@ static void mdss_panelinfo_to_fb_var(struct mdss_panel_info *pinfo,
 {
 	var->xres = mdss_fb_get_panel_xres(pinfo);
 #ifdef CONFIG_SHDISP /* CUST_ID_00068 */
+#ifdef CONFIG_SHDISP_PANEL_HAYABUSA
     var->yres = pinfo->yres - 4;
+#else /* CONFIG_SHDISP_PANEL_HAYABUSA */
+	var->yres = pinfo->yres;
+#endif /* CONFIG_SHDISP_PANEL_HAYABUSA */
 #else /* CONFIG_SHDISP */
 	var->yres = pinfo->yres;
 #endif /* CONFIG_SHDISP */
@@ -3269,6 +3278,10 @@ static int __mdss_fb_perform_commit(struct msm_fb_data_type *mfd)
 	if (mfd->switch_state == MDSS_MDP_WAIT_FOR_COMMIT) {
 		dynamic_dsi_switch = 1;
 		new_dsi_mode = mfd->switch_new_mode;
+	} else if (mfd->switch_state != MDSS_MDP_NO_UPDATE_REQUESTED) {
+		pr_err("invalid commit on fb%d with state = %d\n",
+			mfd->index, mfd->switch_state);
+		goto skip_commit;
 	}
 	mutex_unlock(&mfd->switch_lock);
 
@@ -3294,6 +3307,8 @@ static int __mdss_fb_perform_commit(struct msm_fb_data_type *mfd)
 			pr_err("pan display failed %x on fb%d\n", ret,
 					mfd->index);
 	}
+
+skip_commit:
 #ifndef CONFIG_SHDISP /* CUST_ID_00015 */ /* CUST_ID_00017 */ /* CUST_ID_00018 */
 	if (!ret)
 		mdss_fb_update_backlight(mfd);
@@ -4157,8 +4172,9 @@ static int __ioctl_wait_idle(struct msm_fb_data_type *mfd, u32 cmd)
 		(cmd == MSMFB_OVERLAY_SET))) {
 		ret = mdss_fb_wait_for_kickoff(mfd);
 	} else if ((cmd != MSMFB_VSYNC_CTRL) &&
-#ifdef CONFIG_SHDISP /* CUST_ID_00032 */
+#ifdef CONFIG_SHDISP /* CUST_ID_00032 */ /* CUST_ID_00070 */
 		(cmd != MSMFB_MIPI_DSI_CLKCHG) &&
+		(cmd != MSMFB_SET_MFR) &&
 #endif /* CONFIG_SHDISP */
 		(cmd != MSMFB_OVERLAY_VSYNC_CTRL) &&
 		(cmd != MSMFB_ASYNC_BLIT) &&

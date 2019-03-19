@@ -60,6 +60,7 @@
 #define SHDISP_LOG_LV_PERFORM_DEBUG     (0x40)
 #define SHDISP_LOG_LV_I2CLOG            (0x80)
 #define SHDISP_LOG_LV_DSILOG            (0x100)
+#define SHDISP_LOG_LV_WAITLOG           (0x200)
 #define SHDISP_LOG_LV_ALL               (0x1FF)
 
 #if defined(CONFIG_ANDROID_ENGINEERING)
@@ -88,6 +89,9 @@
 #define SHDISP_DSI_LOG(fmt, args...) \
         SHDISP_PRINTK(SHDISP_LOG_LV_DSILOG, KERN_DEBUG "[SHDISP_DSI][%s] " fmt "\n", __func__, ## args)
 
+#define SHDISP_WAIT_LOG(fmt, args...) \
+        SHDISP_PRINTK(SHDISP_LOG_LV_WAITLOG, KERN_DEBUG "[SHDISP_WAIT][%s] " fmt "\n", __func__, ## args)
+
 #if defined(CONFIG_ANDROID_ENGINEERING)
     #define SHDISP_PERFORMANCE(fmt, args...) \
             SHDISP_PRINTK(SHDISP_LOG_LV_PERFORM, ",[SHDISP_PERFORM]" fmt "\n", ## args)
@@ -113,6 +117,7 @@ extern struct tty_struct *shdisp_tty;
 #define SHDISP_DBG_RECOVERY_ERROR_DETLOW                (2)
 #define SHDISP_DBG_RECOVERY_ERROR_PSALS                 (3)
 #define SHDISP_DBG_RECOVERY_ERROR_DISPON_READ           (4)
+#define SHDISP_DBG_BDIC_ERROR_DCDC1                     (5)
 #endif /* CONFIG_ANDROID_ENGINEERING */
 
 #define SHDISP_DBG_ERR_HEAP_NULL                        (-1)
