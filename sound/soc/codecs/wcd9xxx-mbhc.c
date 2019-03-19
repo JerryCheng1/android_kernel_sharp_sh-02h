@@ -5184,22 +5184,14 @@ static int wcd9xxx_event_notify(struct notifier_block *self, unsigned long val,
 		    & 0x80)) {
 			pr_debug("%s:Micbias turned off by recording, set up again",
 				 __func__);
-#ifdef CONFIG_SH_AUDIO_DRIVER /*18-033*/
-#else
 			snd_soc_update_bits(codec, mbhc->mbhc_bias_regs.ctl_reg,
 					    0x80, 0x80);
-#endif /* CONFIG_SH_AUDIO_DRIVER */ /*18-033*/
 		}
 		break;
 	/* PA usage change */
 	case WCD9XXX_EVENT_PRE_HPHL_PA_ON:
 		set_bit(MBHC_EVENT_PA_HPHL, &mbhc->event_state);
-#ifdef CONFIG_SH_AUDIO_DRIVER /* 18-032 */
-		if (!(snd_soc_read(codec, mbhc->mbhc_bias_regs.ctl_reg) & 0x80) ||
-		    (mbhc->current_plug == PLUG_TYPE_HEADSET))
-#else
 		if (!(snd_soc_read(codec, mbhc->mbhc_bias_regs.ctl_reg) & 0x80))
-#endif /* CONFIG_SH_AUDIO_DRIVER */ /* 18-032 */
 			/* if micbias is not enabled, switch to vddio */
 			wcd9xxx_switch_micbias(mbhc, 1);
 		break;

@@ -62,6 +62,11 @@
 }
 #define SHPWR_DUMP_REG_INFO(fmt, ...) shpwr_add_dump_reg(false, fmt, ##__VA_ARGS__)
 #define SHPWR_DUMP_REG_INFO_AND_FORCESAVE(fmt, ...) shpwr_add_dump_reg(true, fmt, ##__VA_ARGS__)
+enum usb_type_detection_err_wa_status {
+	UDE_NOTRY = 0,
+	UDE_TRY,
+	UDE_COMP,
+};
 #endif /* CONFIG_BATTERY_SH */
 
 #define DISABLE_HVDCP_9V
@@ -287,6 +292,7 @@ struct smbchg_chip {
 	bool					vbus_osc_wa_en;
 	struct delayed_work		vbus_osc_wa_return_check_work;
 	int						usb_type;
+	enum usb_type_detection_err_wa_status	usb_type_detection_status;
 #endif
 
 	struct mutex			usb_status_lock;
@@ -366,6 +372,7 @@ static int get_prop_batt_health(struct smbchg_chip *chip);
 static int get_current_time(unsigned long *now_tm_sec);
 static void smbchg_vbus_osc_wa_return_check_work(struct work_struct *work);
 static int smbchg_set_fastchg_current(struct smbchg_chip *chip,int current_ma);
+static void smbchg_usb_type_detection_err_wa(struct smbchg_chip *chip);
 static bool step_charging_flg = false;
 static bool full_display_flg = false;
 #endif /* CONFIG_BATTERY_SH */
@@ -3998,6 +4005,16 @@ static void check_battery_type(struct smbchg_chip *chip)
 #ifdef CONFIG_BATTERY_SH
 #define USB_DCP_CURRENT_LIMIT 1500
 #define USB_HVDCP_CURRENT_LIMIT 1400
+#define USB_TYPE_DETECTION_ERR_CURRENT_LIMIT 1500
+#define USB_TYPE_DETECTION_ERR_DELAY 5000
+static int smbchg_usb_type_detection_err_wa_en = 1;
+module_param_named(
+	usb_type_detection_err_wa_en, smbchg_usb_type_detection_err_wa_en, int, S_IRUSR | S_IWUSR
+);
+static int smbchg_usb_type_detection_err_wa_delay = USB_TYPE_DETECTION_ERR_DELAY;
+module_param_named(
+	usb_type_detection_err_wa_delay, smbchg_usb_type_detection_err_wa_delay, int, S_IRUSR | S_IWUSR
+);
 #endif	/* CONFIG_BATTERY_SH */
 
 static void smbchg_external_power_changed(struct power_supply *psy)
@@ -4052,6 +4069,24 @@ static void smbchg_external_power_changed(struct power_supply *psy)
 		current_limit = prop.intval / 1000;
 
 	read_usb_type(chip, &usb_type_name, &usb_supply_type);
+
+#ifdef CONFIG_BATTERY_SH
+	if(smbchg_usb_type_detection_err_wa_en) {
+		if(chip->usb_type_detection_status == UDE_NOTRY) {
+			if(usb_supply_type == POWER_SUPPLY_TYPE_USB && current_limit == USB_TYPE_DETECTION_ERR_CURRENT_LIMIT) {
+
+				msleep(smbchg_usb_type_detection_err_wa_delay);
+
+				if(is_usb_present(chip)) {
+					chip->usb_type_detection_status = UDE_TRY;
+					pr_smb(PR_MISC, "UDE status=%d\n", chip->usb_type_detection_status);
+					smbchg_usb_type_detection_err_wa(chip);
+				}
+			}
+		}
+	}
+#endif /* CONFIG_BATTERY_SH */
+
 #ifndef CONFIG_BATTERY_SH
 	if (usb_supply_type != POWER_SUPPLY_TYPE_USB)
 		goto  skip_current_for_non_sdp;
@@ -4733,6 +4768,17 @@ static void handle_usb_removal(struct smbchg_chip *chip)
 	chip->very_weak_charger_sh = false;
 	cancel_delayed_work(&chip->vbus_osc_wa_return_check_work);
 	full_display_flg = false;
+
+	if(smbchg_usb_type_detection_err_wa_en) {
+		pr_smb(PR_MISC, "UDE status=%d\n", chip->usb_type_detection_status);
+		if(chip->usb_type_detection_status == UDE_TRY) {
+			chip->usb_type_detection_status = UDE_COMP;
+		} else {
+			chip->usb_type_detection_status = UDE_NOTRY;
+		}
+		pr_smb(PR_MISC, "UDE status=%d\n", chip->usb_type_detection_status);
+	}
+
 	shbatt_api_battlog_event(SHBATTLOG_EVENT_CHG_REMOVE_USB);
 	if (wake_lock_active(&chip->batt_charge_wake_lock)) {
 		wake_unlock(&chip->batt_charge_wake_lock);
@@ -7376,6 +7422,21 @@ static void smbchg_vbus_osc_wa_return_check_work(struct work_struct *work)
 		cancel_delayed_work(&chip->vbus_osc_wa_return_check_work);
 		schedule_delayed_work(&chip->vbus_osc_wa_return_check_work, msecs_to_jiffies(vbus_osc_wa_return_check_ms));
 	}
+}
+
+static void smbchg_usb_type_detection_err_wa(struct smbchg_chip *chip)
+{
+	pr_smb(PR_STATUS, "USB Type Detection WA\n");
+
+	smbchg_sec_masked_write(chip,
+			chip->usb_chgpth_base + USBIN_CHGR_CFG,
+			ADAPTER_ALLOWANCE_MASK, USBIN_ADAPTER_9V);
+
+	smbchg_sec_masked_write(chip,
+			chip->usb_chgpth_base + USBIN_CHGR_CFG,
+			ADAPTER_ALLOWANCE_MASK, chip->original_usbin_allowance);
+	
+	return;
 }
 
 #endif /* CONFIG_BATTERY_SH */

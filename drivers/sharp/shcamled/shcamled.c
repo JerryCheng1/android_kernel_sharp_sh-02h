@@ -26,6 +26,7 @@
 //#include "linux/qpnp/qpnp-api.h"
 #include <media/msm_cam_sensor.h>
 #include <linux/wakelock.h>
+#include <linux/pm_qos.h>
 
 /* ------------------------------------------------------------------------- */
 /* PROTOTYPES                                                                */
@@ -112,6 +113,7 @@ module_param_named(
 );
 
 static struct wake_lock shcamled_wake_lock;
+static struct pm_qos_request cam_pm_qos_request;
 
 /* ------------------------------------------------------------------------- */
 /* CODE                                                                      */
@@ -438,10 +440,12 @@ static ssize_t shcamled_torch_store(struct device *dev,
 		if( val == SHCAM_LED_TORCH_CURRENT ){
 			SHCAMLED_TRACE("%s(%d) wake_lock(shcamled_wake_lock)\n", __func__, __LINE__);
 			wake_lock(&shcamled_wake_lock);
+			pm_qos_update_request(&cam_pm_qos_request, 1);
 		}
 		else{
 			SHCAMLED_TRACE("%s(%d) wake_unlock(shcamled_wake_lock)\n", __func__, __LINE__);
 			wake_unlock(&shcamled_wake_lock);
+			pm_qos_update_request(&cam_pm_qos_request, PM_QOS_DEFAULT_VALUE);
 		}
 		SHCAMLED_TRACE("%s done ret:%d\n", __FUNCTION__, proc_ret);
 	}
@@ -551,6 +555,9 @@ static int __init shcamled_torch_driver_init(void)
 	}
 
     wake_lock_init(&shcamled_wake_lock, WAKE_LOCK_SUSPEND, "shcamled_wake_lock");
+    cam_pm_qos_request.type = PM_QOS_REQ_AFFINE_CORES;
+    cam_pm_qos_request.cpus_affine.bits[0] = 0x0f;
+	pm_qos_add_request(&cam_pm_qos_request, PM_QOS_CPU_DMA_LATENCY, PM_QOS_DEFAULT_VALUE);
 
 	SHCAMLED_TRACE("%s done\n", __FUNCTION__);
 	return 0;
@@ -566,6 +573,7 @@ static void __exit shcamled_torch_driver_exit(void)
 
     wake_unlock(&shcamled_wake_lock);
     wake_lock_destroy(&shcamled_wake_lock);
+	pm_qos_remove_request(&cam_pm_qos_request);
 
 	platform_driver_unregister(&shcamled_torch_driver);
 	platform_device_unregister(&shcamled_torch_dev);
