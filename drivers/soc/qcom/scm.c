@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -101,6 +101,7 @@ struct scm_response {
 #define R3_STR "x3"
 #define R4_STR "x4"
 #define R5_STR "x5"
+#define R6_STR "x6"
 
 /* Outer caches unsupported on ARM64 platforms */
 #define outer_inv_range(x, y)
@@ -369,6 +370,7 @@ static int __scm_call_armv8_64(u64 x0, u64 x1, u64 x2, u64 x3, u64 x4, u64 x5,
 	register u64 r3 asm("r3") = x3;
 	register u64 r4 asm("r4") = x4;
 	register u64 r5 asm("r5") = x5;
+	register u64 r6 asm("r6") = 0;
 
 	do {
 		asm volatile(
@@ -382,14 +384,15 @@ static int __scm_call_armv8_64(u64 x0, u64 x1, u64 x2, u64 x3, u64 x4, u64 x5,
 			__asmeq("%7", R3_STR)
 			__asmeq("%8", R4_STR)
 			__asmeq("%9", R5_STR)
+			__asmeq("%10", R6_STR)
 #ifdef REQUIRES_SEC
 			".arch_extension sec\n"
 #endif
 			"smc	#0\n"
 			: "=r" (r0), "=r" (r1), "=r" (r2), "=r" (r3)
 			: "r" (r0), "r" (r1), "r" (r2), "r" (r3), "r" (r4),
-			  "r" (r5)
-			: "x6", "x7", "x8", "x9", "x10", "x11", "x12", "x13",
+			  "r" (r5), "r" (r6)
+			: "x7", "x8", "x9", "x10", "x11", "x12", "x13",
 			  "x14", "x15", "x16", "x17");
 	} while (r0 == SCM_INTERRUPTED);
 
@@ -412,6 +415,7 @@ static int __scm_call_armv8_32(u32 w0, u32 w1, u32 w2, u32 w3, u32 w4, u32 w5,
 	register u32 r3 asm("r3") = w3;
 	register u32 r4 asm("r4") = w4;
 	register u32 r5 asm("r5") = w5;
+	register u32 r6 asm("r6") = 0;
 
 	do {
 		asm volatile(
@@ -425,14 +429,15 @@ static int __scm_call_armv8_32(u32 w0, u32 w1, u32 w2, u32 w3, u32 w4, u32 w5,
 			__asmeq("%7", R3_STR)
 			__asmeq("%8", R4_STR)
 			__asmeq("%9", R5_STR)
+			__asmeq("%10", R6_STR)
 #ifdef REQUIRES_SEC
 			".arch_extension sec\n"
 #endif
 			"smc	#0\n"
 			: "=r" (r0), "=r" (r1), "=r" (r2), "=r" (r3)
 			: "r" (r0), "r" (r1), "r" (r2), "r" (r3), "r" (r4),
-			  "r" (r5)
-			: "x6", "x7", "x8", "x9", "x10", "x11", "x12", "x13",
+			  "r" (r5), "r" (r6)
+			: "x7", "x8", "x9", "x10", "x11", "x12", "x13",
 			"x14", "x15", "x16", "x17");
 
 	} while (r0 == SCM_INTERRUPTED);
@@ -636,10 +641,6 @@ int scm_call2(u32 fn_id, struct scm_desc *desc)
 
 		desc->ret[0] = desc->ret[1] = desc->ret[2] = 0;
 
-		pr_debug("scm_call: func id %#llx, args: %#x, %#llx, %#llx, %#llx, %#llx\n",
-			x0, desc->arginfo, desc->args[0], desc->args[1],
-			desc->args[2], desc->x5);
-
 		if (scm_version == SCM_ARMV8_64)
 			ret = __scm_call_armv8_64(x0, desc->arginfo,
 						  desc->args[0], desc->args[1],
@@ -659,10 +660,8 @@ int scm_call2(u32 fn_id, struct scm_desc *desc)
 	}  while (ret == SCM_V2_EBUSY && (retry_count++ < SCM_EBUSY_MAX_RETRY));
 
 	if (ret < 0)
-		pr_err("scm_call failed: func id %#llx, arginfo: %#x, args: %#llx, %#llx, %#llx, %#llx, ret: %d, syscall returns: %#llx, %#llx, %#llx\n",
-			x0, desc->arginfo, desc->args[0], desc->args[1],
-			desc->args[2], desc->x5, ret, desc->ret[0],
-			desc->ret[1], desc->ret[2]);
+		pr_err("scm_call failed: func id %#llx, ret: %d, syscall returns: %#llx, %#llx, %#llx\n",
+			x0, ret, desc->ret[0], desc->ret[1], desc->ret[2]);
 
 	if (arglen > N_REGISTER_ARGS)
 		kfree(desc->extra_arg_buf);

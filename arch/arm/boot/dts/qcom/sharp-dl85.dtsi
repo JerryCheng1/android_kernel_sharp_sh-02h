@@ -195,8 +195,6 @@
     tunctrl {
         compatible = "tunctrl";
 		qcom,dtv-en-gpio = <&pm8994_gpios 22 0>;
-		qcom,dtv-rst-gpio  = <&msm_gpio 106 0x00>;
-		qcom,ofdm-rst-gpio  = <&msm_gpio 38 0x00>;
     };
 
 /* => SH_AUDIO_DRIVER 18-001 */
